@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'window.ui'
 #
-# Created: Sat Dec 30 00:15:19 2017
+# Created: Sat Dec 30 15:58:01 2017
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -49,12 +49,18 @@ class Ui_MainWindow(object):
         self.actionPointPoint.setObjectName("actionPointPoint")
         self.actionLineLine = QtGui.QAction(MainWindow)
         self.actionLineLine.setObjectName("actionLineLine")
+        self.actionLinePoint = QtGui.QAction(MainWindow)
+        self.actionLinePoint.setObjectName("actionLinePoint")
+        self.actionLinePointLine = QtGui.QAction(MainWindow)
+        self.actionLinePointLine.setObjectName("actionLinePointLine")
         self.toolBar.addAction(self.actionZoomIn)
         self.toolBar.addAction(self.actionZoomOut)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionPoints)
         self.toolBar.addAction(self.actionPointPoint)
         self.toolBar.addAction(self.actionLineLine)
+        self.toolBar.addAction(self.actionLinePoint)
+        self.toolBar.addAction(self.actionLinePointLine)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -67,4 +73,6 @@ class Ui_MainWindow(object):
         self.actionPoints.setText(QtGui.QApplication.translate("MainWindow", "Points", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPointPoint.setText(QtGui.QApplication.translate("MainWindow", "Point-Point", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLineLine.setText(QtGui.QApplication.translate("MainWindow", "Line-Line", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionLinePoint.setText(QtGui.QApplication.translate("MainWindow", "Line Point", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionLinePointLine.setText(QtGui.QApplication.translate("MainWindow", "Line Point-Line", None, QtGui.QApplication.UnicodeUTF8))
 

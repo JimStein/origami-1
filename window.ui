@@ -70,6 +70,8 @@
    <addaction name="actionPoints"/>
    <addaction name="actionPointPoint"/>
    <addaction name="actionLineLine"/>
+   <addaction name="actionLinePoint"/>
+   <addaction name="actionLinePointLine"/>
   </widget>
   <action name="actionZoomIn">
    <property name="text">
@@ -94,6 +96,16 @@
   <action name="actionLineLine">
    <property name="text">
     <string>Line-Line</string>
+   </property>
+  </action>
+  <action name="actionLinePoint">
+   <property name="text">
+    <string>Line Point</string>
+   </property>
+  </action>
+  <action name="actionLinePointLine">
+   <property name="text">
+    <string>Line Point-Line</string>
    </property>
   </action>
  </widget>

@@ -24,6 +24,8 @@ class Window(QtGui.QMainWindow):
         self.ui.actionPoints.triggered.connect(self.on_action_points)
         self.ui.actionPointPoint.triggered.connect(self.on_action_point_point)
         self.ui.actionLineLine.triggered.connect(self.on_action_line_line)
+        self.ui.actionLinePoint.triggered.connect(self.on_action_line_point)
+        self.ui.actionLinePointLine.triggered.connect(self.on_action_line_point_line)
 
         self.ui.canvas.setMouseTracking(True)
 
@@ -257,6 +259,8 @@ class Window(QtGui.QMainWindow):
         self.ui.actionPoints.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
         self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
         self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 2)
+        self.ui.actionLinePoint.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 1)
+        self.ui.actionLinePointLine.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 2)
 
     def add_intersections(self, line):
         for segment in self.segments:
@@ -330,3 +334,45 @@ class Window(QtGui.QMainWindow):
         self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
+
+    def on_action_line_point(self):
+        for selected in self.selected:
+            if isinstance(selected, geo.Point):
+                point = selected
+            elif isinstance(selected, geo.Line):
+                line = selected
+
+        normal = geo.Vector(-line.normal.y, line.normal.x)
+        offset = normal * (point - geo.Point(0, 0))
+
+        line = geo.Line(normal, offset)
+        self.add_intersections(line)
+        self.lines.append(line)
+
+        self.selected.clear()
+        self.update_actions()
+        self.ui.canvas.update()
+
+    def on_action_line_point_line(self):
+        lines = []
+        for selected in self.selected:
+            if isinstance(selected, geo.Point):
+                point = selected
+            elif isinstance(selected, geo.Line):
+                lines.append(selected)
+        line1 = lines[0]
+        line2 = lines[1]
+
+        parallel = geo.Line(line1.normal, line1.normal * (point - geo.Point(0, 0)))
+        intersection = self.intersect_lines(parallel, line2)
+        if intersection:
+            normal = geo.Vector(-line1.normal.y, line1.normal.x)
+            offset = (normal * (point - geo.Point(0, 0)) + normal * (intersection - geo.Point(0, 0))) / 2
+
+            line = geo.Line(normal, offset)
+            self.add_intersections(line)
+            self.lines.append(line)
+
+            self.selected.clear()
+            self.update_actions()
+            self.ui.canvas.update()
