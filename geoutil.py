@@ -2,6 +2,9 @@ import geo
 
 import math
 
+MAX_DISTANCE = 1000
+ORIGIN = geo.Point(0, 0)
+
 def is_point_within_segment(point, segment):
     length2 = segment.length2()
     length2a = (point - segment.start).magnitude2()
@@ -13,7 +16,7 @@ def intersect_lines(a, b):
     xdet = a.offset * b.normal.y - a.normal.y * b.offset
     ydet = a.normal.x * b.offset - a.offset * b.normal.x
 
-    if abs(xdet) < abs(1000 * det) and abs(ydet) < abs(1000 * det):
+    if abs(xdet) < abs(MAX_DISTANCE * det) and abs(ydet) < abs(MAX_DISTANCE * det):
         x = xdet / det
         y = ydet / det
         return geo.Point(x, y)
@@ -27,25 +30,28 @@ def intersect_line_segment(line, segment):
     else:
         return None
 
+def vector(point):
+    return point - ORIGIN
+
 def distance_to_line(point, line):
-    offset = (point - geo.Point(0, 0)) * line.normal
+    offset = vector(point) * line.normal
     return abs(offset - line.offset)
 
 def parallel_line(line, point):
     normal = line.normal
-    offset = normal * (point - geo.Point(0, 0))
+    offset = normal * vector(point)
     return geo.Line(normal, offset)
 
 def perpendicular_line(line, point):
     normal = geo.Vector(line.normal.y, -line.normal.x)
-    offset = normal * (point - geo.Point(0, 0))
+    offset = normal * vector(point)
     return geo.Line(normal, offset)
 
 def line_from_points(point0, point1):
     return geo.Segment(point0, point1).line()
 
 def line_from_point_normal(point, normal):
-    offset = normal * (point - geo.Point(0, 0))
+    offset = normal * vector(point)
     return geo.Line(normal, offset)
 
 def huzita_justin_1(point0, point1):
@@ -53,7 +59,7 @@ def huzita_justin_1(point0, point1):
 
 def huzita_justin_2(point0, point1):
     normal = point1 - point0
-    offset = (normal * (point0 - geo.Point(0, 0)) + normal * (point1 - geo.Point(0, 0))) / 2
+    offset = (normal * vector(point0) + normal * vector(point1)) / 2
     return geo.Line(normal, offset)
 
 def huzita_justin_3(line0, line1):
@@ -65,9 +71,9 @@ def huzita_justin_3(line0, line1):
     sin = math.sin(theta)
     lines = []
     for normal in (geo.Vector(cos, sin), geo.Vector(-sin, cos)):
-        if abs(line0.offset) > abs(1000 * (line0.normal * normal)):
+        if abs(line0.offset) > abs(MAX_DISTANCE * (line0.normal * normal)):
             continue
-        if abs(line1.offset) > abs(1000 * (line1.normal * normal)):
+        if abs(line1.offset) > abs(MAX_DISTANCE * (line1.normal * normal)):
             continue
 
         t0 = line0.offset / (line0.normal * normal)
@@ -85,7 +91,7 @@ def huzita_justin_7(point, line0, line1):
     intersection = intersect_lines(parallel, line1)
     if intersection:
         normal = geo.Vector(-line0.normal.y, line0.normal.x)
-        offset = (normal * (point - geo.Point(0, 0)) + normal * (intersection - geo.Point(0, 0))) / 2
+        offset = (normal * vector(point) + normal * vector(intersection)) / 2
         return geo.Line(normal, offset)
     else:
         return None

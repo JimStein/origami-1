@@ -6,6 +6,20 @@ from window_ui import Ui_MainWindow
 import geo
 import geoutil
 
+SELECTION_THRESHOLD = 10
+MARGIN = 10
+ZOOM_INCREMENT = 1.25
+
+EDGE_COLOR = QtGui.QColor(0, 0, 0)
+PAPER_COLOR = QtGui.QColor(0xFF, 0xFF, 0x80)
+LINE_COLOR = QtGui.QColor(0x80, 0x80, 0x80)
+SELECTED_LINE_COLORS = [QtGui.QColor(0xFF, 0x80, 0x00), QtGui.QColor(0x80, 0x40, 0x00)]
+SELECTED_POINT_COLORS = [QtGui.QColor(0x00, 0xFF, 0x80), QtGui.QColor(0x00, 0x80, 0x40)]
+HIGHLIGHT_COLOR = QtGui.QColor(0, 0, 0)
+LINE_WIDTH = 2
+LINE_WIDTH_SELECTED = 3
+POINT_SIZE = 3
+
 class Window(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
@@ -28,7 +42,7 @@ class Window(QtGui.QMainWindow):
 
         self.ui.canvas.setMouseTracking(True)
 
-        self.zoom = 0.9
+        self.zoom = 1
 
         points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
         self.segments = []
@@ -44,18 +58,19 @@ class Window(QtGui.QMainWindow):
 
     def point_to_window(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
-        margin = 10
-        return QtCore.QPoint(margin + point.x * (size - 2 * margin), margin + point.y * (size - 2 * margin))
+        return QtCore.QPoint(MARGIN + point.x * (size - 2 * MARGIN), MARGIN + point.y * (size - 2 * MARGIN))
 
     def window_to_point(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
-        margin = 10
-        return geo.Point((point.x() - margin) / (size - 2 * margin), (point.y() - margin) / (size - 2 * margin))
+        return geo.Point((point.x() - MARGIN) / (size - 2 * MARGIN), (point.y() - MARGIN) / (size - 2 * MARGIN))
+
+    def selection_threshold(self):
+        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        return SELECTION_THRESHOLD / size
 
     def find_intersection_near(self, mouse_point):
         found_point = None
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
-        threshold = 10 / size
+        threshold = self.selection_threshold()
         for point in self.intersections:
             distance2 = (mouse_point - point).magnitude2()
             if distance2 <= threshold * threshold:
@@ -65,8 +80,7 @@ class Window(QtGui.QMainWindow):
 
     def find_line_near(self, mouse_point):
         found_line = None
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
-        threshold = 10 / size
+        threshold = self.selection_threshold()
         for segment in self.segments:
             line = segment.line()
             if geoutil.distance_to_line(mouse_point, line) <= threshold and geoutil.is_point_within_segment(mouse_point, segment):
@@ -90,7 +104,7 @@ class Window(QtGui.QMainWindow):
             painter.drawLine(*draw_points)
 
         def draw_point(point):
-            painter.drawEllipse(self.point_to_window(point), 3, 3)
+            painter.drawEllipse(self.point_to_window(point), POINT_SIZE, POINT_SIZE)
 
         def draw_line(line):
             min = self.window_to_point(QtCore.QPoint(0, 0))
@@ -112,8 +126,8 @@ class Window(QtGui.QMainWindow):
             draw_points = [self.point_to_window(point) for point in points]
             painter.drawPolygon(draw_points)
 
-        pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        brush = QtGui.QBrush(QtGui.QColor(0xFF, 0xFF, 0x80))
+        pen = QtGui.QPen(EDGE_COLOR, LINE_WIDTH, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        brush = QtGui.QBrush(PAPER_COLOR)
         painter.setPen(pen)
         painter.setBrush(brush)
         points = [segment.start for segment in self.segments]
@@ -124,7 +138,7 @@ class Window(QtGui.QMainWindow):
             if highlight in self.selected or self.num_selected(type(highlight)) == 2:
                 highlight = None
 
-        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        pen = QtGui.QPen(LINE_COLOR, LINE_WIDTH, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
         painter.setPen(pen)
         for line in self.lines:
             draw_line(line)
@@ -133,8 +147,7 @@ class Window(QtGui.QMainWindow):
         for selected in self.selected:
             if not isinstance(selected, geo.Line):
                 continue
-            colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
-            pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            pen = QtGui.QPen(SELECTED_LINE_COLORS[idx], LINE_WIDTH_SELECTED, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
             draw_line(selected)
             idx += 1
@@ -144,20 +157,19 @@ class Window(QtGui.QMainWindow):
         for selected in self.selected:
             if not isinstance(selected, geo.Point):
                 continue
-            colors = [(0x00, 0xFF, 0x80), (0x00, 0x80, 0x40)]
-            brush = QtGui.QBrush(QtGui.QColor(*colors[idx]))
+            brush = QtGui.QBrush(SELECTED_POINT_COLORS[idx])
             painter.setBrush(brush)
             draw_point(selected)
             idx += 1
 
         if highlight:
             if isinstance(highlight, geo.Line):
-                pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+                pen = QtGui.QPen(HIGHLIGHT_COLOR, LINE_WIDTH_SELECTED, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
                 painter.setPen(pen)
                 draw_line(highlight)
 
             elif isinstance(highlight, geo.Point):
-                brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
+                brush = QtGui.QBrush(HIGHLIGHT_COLOR)
                 painter.setBrush(brush)
                 painter.setPen(Qt.NoPen)
                 draw_point(highlight)
@@ -252,11 +264,11 @@ class Window(QtGui.QMainWindow):
         self.add_lines([line])
 
     def on_action_zoom_in(self):
-        self.zoom *= 1.25
+        self.zoom *= ZOOM_INCREMENT
         self.resize_canvas()
 
     def on_action_zoom_out(self):
-        self.zoom /= 1.25
+        self.zoom /= ZOOM_INCREMENT
         self.resize_canvas()
 
     def on_action_points(self):
