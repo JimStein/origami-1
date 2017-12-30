@@ -4,8 +4,7 @@ from PySide.QtCore import Qt
 from window_ui import Ui_MainWindow
 
 import geo
-
-import math
+import geoutil
 
 class Window(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -64,46 +63,19 @@ class Window(QtGui.QMainWindow):
                 break
         return found_point
 
-    def is_point_within_segment(self, point, segment):
-        length2 = segment.length2()
-        length2a = (point - segment.start).magnitude2()
-        length2b = (point - segment.end).magnitude2()
-        return (length2a < length2 and length2b < length2)
-
-    def intersect_lines(self, a, b):
-        det = a.normal.x * b.normal.y - a.normal.y * b.normal.x
-        xdet = a.offset * b.normal.y - a.normal.y * b.offset
-        ydet = a.normal.x * b.offset - a.offset * b.normal.x
-
-        if abs(xdet) < abs(1000 * det) and abs(ydet) < abs(1000 * det):
-            x = xdet / det
-            y = ydet / det
-            return geo.Point(x, y)
-        else:
-            return None
-
-    def intersect_line_segment(self, line, segment):
-        point = self.intersect_lines(line, segment.line())
-        if point and self.is_point_within_segment(point, segment):
-            return point
-        else:
-            return None
-
     def find_line_near(self, mouse_point):
         found_line = None
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         threshold = 10 / size
         for segment in self.segments:
             line = segment.line()
-            offset = (mouse_point - geo.Point(0, 0)) * line.normal
-            if abs(offset - line.offset) <= threshold and self.is_point_within_segment(mouse_point, segment):
+            if geoutil.distance_to_line(mouse_point, line) <= threshold and geoutil.is_point_within_segment(mouse_point, segment):
                 found_line = line
                 break
 
         if not found_line:
             for line in self.lines:
-                offset = (mouse_point - geo.Point(0, 0)) * line.normal
-                if abs(offset - line.offset) <= threshold:
+                if geoutil.distance_to_line(mouse_point, line) <= threshold:
                     found_line = line
                     break
 
@@ -262,16 +234,24 @@ class Window(QtGui.QMainWindow):
         self.ui.actionLinePoint.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 1)
         self.ui.actionLinePointLine.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 2)
 
-    def add_intersections(self, line):
-        for segment in self.segments:
-            point = self.intersect_line_segment(line, segment)
-            if point:
-                self.intersections.append(point)
+    def add_lines(self, lines):
+        for line in lines:
+            for segment in self.segments:
+                point = geoutil.intersect_line_segment(line, segment)
+                if point:
+                    self.intersections.append(point)
 
-        for other_line in self.lines:
-            point = self.intersect_lines(line, other_line)
-            if point:
-                self.intersections.append(point)
+            for other_line in self.lines:
+                point = geoutil.intersect_lines(line, other_line)
+                if point:
+                    self.intersections.append(point)
+
+        self.lines.extend(lines)
+        self.update_actions()
+        self.ui.canvas.update()
+
+    def add_line(self, line):
+        self.add_lines([line])
 
     def on_action_zoom_in(self):
         self.zoom *= 1.25
@@ -282,58 +262,20 @@ class Window(QtGui.QMainWindow):
         self.resize_canvas()
 
     def on_action_points(self):
-        point0 = self.selected[0]
-        point1 = self.selected[1]
-        segment = geo.Segment(point0, point1)
-        line = segment.line()
-        self.add_intersections(line)
-        self.lines.append(line)
+        line = geoutil.huzita_justin_1(self.selected[0], self.selected[1])
+        self.add_line(line)
         self.selected.clear()
-        self.update_actions()
-        self.ui.canvas.update()
 
     def on_action_point_point(self):
-        point0 = self.selected[0]
-        point1 = self.selected[1]
-        normal = point1 - point0
-        offset = (normal * (point0 - geo.Point(0, 0)) + normal * (point1 - geo.Point(0, 0))) / 2
-        line = geo.Line(normal, offset)
-        self.add_intersections(line)
-        self.lines.append(line)
+        line = geoutil.huzita_justin_2(self.selected[0], self.selected[1])
+        self.add_line(line)
         self.selected.clear()
-        self.update_actions()
-        self.ui.canvas.update()
 
     def on_action_line_line(self):
-        line0 = self.selected[0]
-        line1 = self.selected[1]
-
-        theta1 = math.atan2(line0.normal.y, line0.normal.x)
-        theta2 = math.atan2(line1.normal.y, line1.normal.x)
-        theta = (theta1 + theta2) / 2
-
-        cos = math.cos(theta)
-        sin = math.sin(theta)
-        lines = []
-        for normal in (geo.Vector(cos, sin), geo.Vector(-sin, cos)):
-            if abs(line0.offset) > abs(1000 * (line0.normal * normal)):
-                continue
-            if abs(line1.offset) > abs(1000 * (line1.normal * normal)):
-                continue
-
-            t0 = line0.offset / (line0.normal * normal)
-            t1 = line1.offset / (line1.normal * normal)
-            offset = (t0 + t1) / 2
-            lines.append(geo.Line(normal, offset))
-
-        for line in lines:
-            self.add_intersections(line)
-
-        self.lines.extend(lines)
-
-        self.selected.clear()
-        self.update_actions()
-        self.ui.canvas.update()
+        lines = geoutil.huzita_justin_3(self.selected[0], self.selected[1])
+        if lines:
+            self.add_lines(lines)
+            self.selected.clear()
 
     def on_action_line_point(self):
         for selected in self.selected:
@@ -342,16 +284,9 @@ class Window(QtGui.QMainWindow):
             elif isinstance(selected, geo.Line):
                 line = selected
 
-        normal = geo.Vector(-line.normal.y, line.normal.x)
-        offset = normal * (point - geo.Point(0, 0))
-
-        line = geo.Line(normal, offset)
-        self.add_intersections(line)
-        self.lines.append(line)
-
+        line = geoutil.huzita_justin_4(point, line)
+        self.add_line(line)
         self.selected.clear()
-        self.update_actions()
-        self.ui.canvas.update()
 
     def on_action_line_point_line(self):
         lines = []
@@ -360,19 +295,8 @@ class Window(QtGui.QMainWindow):
                 point = selected
             elif isinstance(selected, geo.Line):
                 lines.append(selected)
-        line0 = lines[0]
-        line1 = lines[1]
 
-        parallel = geo.Line(line0.normal, line0.normal * (point - geo.Point(0, 0)))
-        intersection = self.intersect_lines(parallel, line1)
-        if intersection:
-            normal = geo.Vector(-line0.normal.y, line0.normal.x)
-            offset = (normal * (point - geo.Point(0, 0)) + normal * (intersection - geo.Point(0, 0))) / 2
-
-            line = geo.Line(normal, offset)
-            self.add_intersections(line)
-            self.lines.append(line)
-
+        line = geoutil.huzita_justin_7(point, lines[0], lines[1])
+        if line:
+            self.add_line(line)
             self.selected.clear()
-            self.update_actions()
-            self.ui.canvas.update()
