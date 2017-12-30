@@ -28,7 +28,14 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.setMouseTracking(True)
 
         self.zoom = 0.9
-        self.points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
+
+        points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
+        self.segments = []
+        last_point = points[-1]
+        for point in points:
+            self.segments.append(geo.Segment(last_point, point))
+            last_point = point
+        self.intersections = points
         self.highlight = None
         self.selected = []
         self.lines = []
@@ -44,35 +51,52 @@ class Window(QtGui.QMainWindow):
         margin = 10
         return geo.Point((point.x() - margin) / (size - 2 * margin), (point.y() - margin) / (size - 2 * margin))
 
-    def find_point_near(self, mouse_point):
+    def find_intersection_near(self, mouse_point):
         found_point = None
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         threshold = 10 / size
-        for point in self.points:
+        for point in self.intersections:
             distance2 = (mouse_point - point).magnitude2()
             if distance2 <= threshold * threshold:
                 found_point = point
                 break
         return found_point
 
+    def is_point_within_segment(self, point, segment):
+        length2 = segment.length2()
+        length2a = (point - segment.start).magnitude2()
+        length2b = (point - segment.end).magnitude2()
+        return (length2a < length2 and length2b < length2)
+
+    def intersect_lines(self, line1, line2):
+        det = line1.normal.x * line2.normal.y - line1.normal.y * line2.normal.x
+        xdet = line1.offset * line2.normal.y - line1.normal.y * line2.offset
+        ydet = line1.normal.x * line2.offset - line1.offset * line2.normal.x
+
+        if abs(xdet) < abs(1000 * det) and abs(ydet) < abs(1000 * det):
+            x = xdet / det
+            y = ydet / det
+            return geo.Point(x, y)
+        else:
+            return None
+
+    def intersect_line_segment(self, line, segment):
+        point = self.intersect_lines(line, segment.line())
+        if point and self.is_point_within_segment(point, segment):
+            return point
+        else:
+            return None
+
     def find_line_near(self, mouse_point):
         found_line = None
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         threshold = 10 / size
-        last_point = self.points[-1]
-        for point in self.points:
-            segment = geo.Segment(last_point, point)
+        for segment in self.segments:
             line = segment.line()
             offset = (mouse_point - geo.Point(0, 0)) * line.normal
-
-            if abs(offset - line.offset) <= threshold:
-                length2 = segment.length2()
-                length2a = (mouse_point - point).magnitude2()
-                length2b = (mouse_point - last_point).magnitude2()
-                if length2a < length2 and length2b < length2:
-                    found_line = line
-                    break
-            last_point = point
+            if abs(offset - line.offset) <= threshold and self.is_point_within_segment(mouse_point, segment):
+                found_line = line
+                break
 
         if not found_line:
             for line in self.lines:
@@ -120,7 +144,8 @@ class Window(QtGui.QMainWindow):
         brush = QtGui.QBrush(QtGui.QColor(0xFF, 0xFF, 0x80))
         painter.setPen(pen)
         painter.setBrush(brush)
-        draw_polygon(self.points)
+        points = [segment.start for segment in self.segments]
+        draw_polygon(points)
 
         highlight = self.highlight
         if highlight:
@@ -190,7 +215,7 @@ class Window(QtGui.QMainWindow):
 
     def on_canvas_mouse_move_event(self, event):
         mouse_point = self.window_to_point(event.pos())
-        highlight = self.find_point_near(mouse_point)
+        highlight = self.find_intersection_near(mouse_point)
         if not highlight:
             highlight = self.find_line_near(mouse_point)
 
@@ -233,6 +258,17 @@ class Window(QtGui.QMainWindow):
         self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
         self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 2)
 
+    def add_intersections(self, line):
+        for segment in self.segments:
+            point = self.intersect_line_segment(line, segment)
+            if point:
+                self.intersections.append(point)
+
+        for other_line in self.lines:
+            point = self.intersect_lines(line, other_line)
+            if point:
+                self.intersections.append(point)
+
     def on_action_zoom_in(self):
         self.zoom *= 1.25
         self.resize_canvas()
@@ -245,7 +281,9 @@ class Window(QtGui.QMainWindow):
         p1 = self.selected[0]
         p2 = self.selected[1]
         segment = geo.Segment(p1, p2)
-        self.lines.append(segment.line())
+        line = segment.line()
+        self.add_intersections(line)
+        self.lines.append(line)
         self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
@@ -255,7 +293,9 @@ class Window(QtGui.QMainWindow):
         p2 = self.selected[1]
         normal = p2 - p1
         offset = (normal * (p1 - geo.Point(0, 0)) + normal * (p2 - geo.Point(0, 0))) / 2
-        self.lines.append(geo.Line(normal, offset))
+        line = geo.Line(normal, offset)
+        self.add_intersections(line)
+        self.lines.append(line)
         self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
@@ -270,6 +310,7 @@ class Window(QtGui.QMainWindow):
 
         cos = math.cos(theta)
         sin = math.sin(theta)
+        lines = []
         for normal in (geo.Vector(cos, sin), geo.Vector(-sin, cos)):
             if abs(line1.offset) > abs(1000 * (line1.normal * normal)):
                 continue
@@ -279,7 +320,12 @@ class Window(QtGui.QMainWindow):
             t1 = line1.offset / (line1.normal * normal)
             t2 = line2.offset / (line2.normal * normal)
             offset = (t1 + t2) / 2
-            self.lines.append(geo.Line(normal, offset))
+            lines.append(geo.Line(normal, offset))
+
+        for line in lines:
+            self.add_intersections(line)
+
+        self.lines.extend(lines)
 
         self.selected.clear()
         self.update_actions()
