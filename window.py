@@ -266,18 +266,21 @@ class Window(QtGui.QMainWindow):
 
         theta1 = math.atan2(line1.normal.y, line1.normal.x)
         theta2 = math.atan2(line2.normal.y, line2.normal.x)
-        if theta1 - theta2 > math.pi/2:
-            theta2 += math.pi
-        if theta2 - theta1 > math.pi/2:
-            theta1 += math.pi
         theta = (theta1 + theta2) / 2
 
-        normal = geo.Vector(math.cos(theta), math.sin(theta))
-        t1 = line1.offset / (line1.normal * normal)
-        t2 = line2.offset / (line2.normal * normal)
-        t = (t1 + t2) / 2
-        offset = t * normal.magnitude2()
-        self.lines.append(geo.Line(normal, offset))
+        cos = math.cos(theta)
+        sin = math.sin(theta)
+        for normal in (geo.Vector(cos, sin), geo.Vector(-sin, cos)):
+            if abs(line1.offset) > abs(1000 * (line1.normal * normal)):
+                continue
+            if abs(line2.offset) > abs(1000 * (line2.normal * normal)):
+                continue
+
+            t1 = line1.offset / (line1.normal * normal)
+            t2 = line2.offset / (line2.normal * normal)
+            offset = (t1 + t2) / 2
+            self.lines.append(geo.Line(normal, offset))
+
         self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
