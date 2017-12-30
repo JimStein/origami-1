@@ -55,8 +55,8 @@ class Window(QtGui.QMainWindow):
                 break
         return found_point
 
-    def find_segment_near(self, mouse_point):
-        found_segment = None
+    def find_line_near(self, mouse_point):
+        found_line = None
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         threshold = 10 / size
         last_point = self.points[-1]
@@ -70,10 +70,10 @@ class Window(QtGui.QMainWindow):
                 length2a = (mouse_point - point).magnitude2()
                 length2b = (mouse_point - last_point).magnitude2()
                 if length2a < length2 and length2b < length2:
-                    found_segment = segment
+                    found_line = line
                 break
             last_point = point
-        return found_segment
+        return found_line
 
     def on_canvas_paint_event(self, event):
         painter = QtGui.QPainter(self.ui.canvas)
@@ -113,19 +113,19 @@ class Window(QtGui.QMainWindow):
             if highlight in self.selected or self.num_selected(type(highlight)) == 2:
                 highlight = None
 
-        if highlight and isinstance(highlight, geo.Segment):
+        if highlight and isinstance(highlight, geo.Line):
             pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_segment(highlight)
+            draw_line(highlight)
 
         idx = 0
         for selected in self.selected:
-            if not isinstance(selected, geo.Segment):
+            if not isinstance(selected, geo.Line):
                 continue
             colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
             pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_segment(selected)
+            draw_line(selected)
             idx += 1
 
         painter.setPen(Qt.NoPen)
@@ -176,7 +176,7 @@ class Window(QtGui.QMainWindow):
         mouse_point = self.window_to_point(event.pos())
         highlight = self.find_point_near(mouse_point)
         if not highlight:
-            highlight = self.find_segment_near(mouse_point)
+            highlight = self.find_line_near(mouse_point)
 
         if highlight != self.highlight:
             self.highlight = highlight
@@ -213,9 +213,9 @@ class Window(QtGui.QMainWindow):
         self.ui.scrollArea.verticalScrollBar().setValue(y * vmax)
 
     def update_actions(self):
-        self.ui.actionPoints.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Segment) == 0)
-        self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Segment) == 0)
-        self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Segment) == 2)
+        self.ui.actionPoints.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
+        self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
+        self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 2)
 
     def on_action_zoom_in(self):
         self.zoom *= 1.25
@@ -245,8 +245,8 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.update()
 
     def on_action_line_line(self):
-        line1 = self.selected[0].line()
-        line2 = self.selected[1].line()
+        line1 = self.selected[0]
+        line2 = self.selected[1]
 
         theta1 = math.atan2(line1.normal.y, line1.normal.x)
         theta2 = math.atan2(line2.normal.y, line2.normal.x)
