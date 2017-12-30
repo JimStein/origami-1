@@ -17,22 +17,28 @@ class Window(QtGui.QMainWindow):
         self.ui.actionZoomOut.triggered.connect(self.on_zoom_out)
         self.zoom = 0.9
 
+    def draw_point(self, point):
+        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        return QtCore.QPoint(point[0] * size, point[1] * size)
+
     def on_canvas_paint_event(self, event):
         painter = QtGui.QPainter(self.ui.canvas)
         pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        pen.setCosmetic(True)
         brush = QtGui.QBrush(QtGui.QColor(0xFF, 0xFF, 0x80))
         painter.setPen(pen)
         painter.setBrush(brush)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setWindow(0, 0, 1, 1)
-        painter.drawPolygon([QtCore.QPoint(0, 0), QtCore.QPoint(0, 1), QtCore.QPoint(1, 1), QtCore.QPoint(1, 0)])
+
+        points = [(0, 0), (0, 1), (1, 1), (1, 0)]
+        draw_points = [self.draw_point(point) for point in points]
+        painter.drawPolygon(draw_points)
 
     def on_scroll_area_resize_event(self, event):
         self.resize_canvas()
 
     def resize_canvas(self):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+
         hmax = self.ui.scrollArea.horizontalScrollBar().maximum()
         hvalue = self.ui.scrollArea.horizontalScrollBar().value()
         vmax = self.ui.scrollArea.verticalScrollBar().maximum()
