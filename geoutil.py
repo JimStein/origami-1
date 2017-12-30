@@ -31,9 +31,25 @@ def distance_to_line(point, line):
     offset = (point - geo.Point(0, 0)) * line.normal
     return abs(offset - line.offset)
 
+def parallel_line(line, point):
+    normal = line.normal
+    offset = normal * (point - geo.Point(0, 0))
+    return geo.Line(normal, offset)
+
+def perpendicular_line(line, point):
+    normal = geo.Vector(line.normal.y, -line.normal.x)
+    offset = normal * (point - geo.Point(0, 0))
+    return geo.Line(normal, offset)
+
+def line_from_points(point0, point1):
+    return geo.Segment(point0, point1).line()
+
+def line_from_point_normal(point, normal):
+    offset = normal * (point - geo.Point(0, 0))
+    return geo.Line(normal, offset)
+
 def huzita_justin_1(point0, point1):
-    segment = geo.Segment(point0, point1)
-    return segment.line()
+    return line_from_points(point0, point1)
 
 def huzita_justin_2(point0, point1):
     normal = point1 - point0
@@ -62,17 +78,14 @@ def huzita_justin_3(line0, line1):
     return lines
 
 def huzita_justin_4(point, line):
-    normal = geo.Vector(-line.normal.y, line.normal.x)
-    offset = normal * (point - geo.Point(0, 0))
-    return geo.Line(normal, offset)
+    return perpendicular_line(line, point)
 
 def huzita_justin_7(point, line0, line1):
-    parallel = geo.Line(line0.normal, line0.normal * (point - geo.Point(0, 0)))
+    parallel = parallel_line(line0, point)
     intersection = intersect_lines(parallel, line1)
     if intersection:
         normal = geo.Vector(-line0.normal.y, line0.normal.x)
         offset = (normal * (point - geo.Point(0, 0)) + normal * (intersection - geo.Point(0, 0))) / 2
-
         return geo.Line(normal, offset)
     else:
         return None

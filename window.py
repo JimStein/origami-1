@@ -96,11 +96,11 @@ class Window(QtGui.QMainWindow):
             min = self.window_to_point(QtCore.QPoint(0, 0))
             max = self.window_to_point(QtCore.QPoint(self.ui.canvas.width(), self.ui.canvas.height()))
             if abs(line.normal.x) > abs(line.normal.y):
-                minline = geo.Segment(min, geo.Point(max.x, min.y)).line()
-                maxline = geo.Segment(geo.Point(min.x, max.y), max).line()
+                minline = geoutil.line_from_point_normal(min, geo.Vector(0, 1))
+                maxline = geoutil.line_from_point_normal(max, geo.Vector(0, -1))
             else:
-                minline = geo.Segment(min, geo.Point(min.x, max.y)).line()
-                maxline = geo.Segment(geo.Point(max.x, min.y), max).line()
+                minline = geoutil.line_from_point_normal(min, geo.Vector(1, 0))
+                maxline = geoutil.line_from_point_normal(max, geo.Vector(-1, 0))
 
             minpoint = geoutil.intersect_lines(line, minline)
             maxpoint = geoutil.intersect_lines(line, maxline)
