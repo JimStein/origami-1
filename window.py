@@ -29,10 +29,8 @@ class Window(QtGui.QMainWindow):
 
         self.zoom = 0.9
         self.points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
-        self.highlight_point = None
-        self.selected_points = []
-        self.highlight_segment = None
-        self.selected_segments = []
+        self.highlight = None
+        self.selected = []
         self.lines = []
         self.update_actions()
 
@@ -110,31 +108,40 @@ class Window(QtGui.QMainWindow):
         painter.setBrush(brush)
         draw_polygon(self.points)
 
-        if self.highlight_segment:
+        highlight = self.highlight
+        if highlight:
+            if highlight in self.selected or self.num_selected(type(highlight)) == 2:
+                highlight = None
+
+        if highlight and isinstance(highlight, geo.Segment):
             pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_segment(self.highlight_segment)
+            draw_segment(highlight)
 
         idx = 0
-        for segment in self.selected_segments:
+        for selected in self.selected:
+            if not isinstance(selected, geo.Segment):
+                continue
             colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
             pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_segment(segment)
+            draw_segment(selected)
             idx += 1
 
         painter.setPen(Qt.NoPen)
-        if self.highlight_point:
+        if highlight and isinstance(highlight, geo.Point):
             brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
             painter.setBrush(brush)
-            draw_point(self.highlight_point)
+            draw_point(highlight)
 
         idx = 0
-        for point in self.selected_points:
+        for selected in self.selected:
+            if not isinstance(selected, geo.Point):
+                continue
             colors = [(0x00, 0xFF, 0x80), (0x00, 0x80, 0x40)]
             brush = QtGui.QBrush(QtGui.QColor(*colors[idx]))
             painter.setBrush(brush)
-            draw_point(point)
+            draw_point(selected)
             idx += 1
 
         pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
@@ -142,50 +149,37 @@ class Window(QtGui.QMainWindow):
         for line in self.lines:
             draw_line(line)
 
+    def num_selected(self, type):
+        count = 0
+        for selected in self.selected:
+            if isinstance(selected, type):
+                count += 1
+        return count
+
     def on_canvas_mouse_release_event(self, event):
         mouse_point = self.window_to_point(event.pos())
-        selected_point = self.find_point_near(mouse_point)
-        if selected_point:
-            if selected_point in self.selected_points:
-                self.selected_points.remove(selected_point)
+
+        if self.highlight:
+            if self.highlight in self.selected:
+                self.selected.remove(self.highlight)
             else:
-                if len(self.selected_points) < 2:
-                    self.selected_points.append(selected_point)
-                    self.highlight_point = None
+                if self.num_selected(type(self.highlight)) < 2:
+                    self.selected.append(self.highlight)
+                    self.highlight = None
         else:
-            selected_segment = self.find_segment_near(mouse_point)
-            if selected_segment:
-                if selected_segment in self.selected_segments:
-                    self.selected_segments.remove(selected_segment)
-                else:
-                    if len(self.selected_segments) < 2:
-                        self.selected_segments.append(selected_segment)
-                        self.highlight_segment = None
-            else:
-                self.selected_points.clear()
-                self.selected_segments.clear()
+            self.selected.clear()
+
         self.ui.canvas.update()
         self.update_actions()
 
     def on_canvas_mouse_move_event(self, event):
         mouse_point = self.window_to_point(event.pos())
-        highlight_point = self.find_point_near(mouse_point)
-        if highlight_point in self.selected_points or len(self.selected_points) == 2:
-            highlight_point = None
+        highlight = self.find_point_near(mouse_point)
+        if not highlight:
+            highlight = self.find_segment_near(mouse_point)
 
-        if highlight_point:
-            highlight_segment = None
-        else:
-            highlight_segment = self.find_segment_near(mouse_point)
-            if highlight_segment in self.selected_segments or len(self.selected_segments) == 2:
-                highlight_segment = None
-
-        if highlight_point != self.highlight_point:
-            self.highlight_point = highlight_point
-            self.ui.canvas.update()
-
-        if highlight_segment != self.highlight_segment:
-            self.highlight_segment = highlight_segment
+        if highlight != self.highlight:
+            self.highlight = highlight
             self.ui.canvas.update()
 
     def on_scroll_area_resize_event(self, event):
@@ -219,9 +213,9 @@ class Window(QtGui.QMainWindow):
         self.ui.scrollArea.verticalScrollBar().setValue(y * vmax)
 
     def update_actions(self):
-        self.ui.actionPoints.setEnabled(len(self.selected_points) == 2 and len(self.selected_segments) == 0)
-        self.ui.actionPointPoint.setEnabled(len(self.selected_points) == 2 and len(self.selected_segments) == 0)
-        self.ui.actionLineLine.setEnabled(len(self.selected_points) == 0 and len(self.selected_segments) == 2)
+        self.ui.actionPoints.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Segment) == 0)
+        self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Segment) == 0)
+        self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Segment) == 2)
 
     def on_action_zoom_in(self):
         self.zoom *= 1.25
@@ -232,27 +226,27 @@ class Window(QtGui.QMainWindow):
         self.resize_canvas()
 
     def on_action_points(self):
-        p1 = self.selected_points[0]
-        p2 = self.selected_points[1]
+        p1 = self.selected[0]
+        p2 = self.selected[1]
         segment = geo.Segment(p1, p2)
         self.lines.append(segment.line())
-        self.selected_points.clear()
+        self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
 
     def on_action_point_point(self):
-        p1 = self.selected_points[0]
-        p2 = self.selected_points[1]
+        p1 = self.selected[0]
+        p2 = self.selected[1]
         normal = p2 - p1
         offset = (normal * (p1 - geo.Point(0, 0)) + normal * (p2 - geo.Point(0, 0))) / 2
         self.lines.append(geo.Line(normal, offset))
-        self.selected_points.clear()
+        self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()
 
     def on_action_line_line(self):
-        line1 = self.selected_segments[0].line()
-        line2 = self.selected_segments[1].line()
+        line1 = self.selected[0].line()
+        line2 = self.selected[1].line()
 
         theta1 = math.atan2(line1.normal.y, line1.normal.x)
         theta2 = math.atan2(line2.normal.y, line2.normal.x)
@@ -268,6 +262,6 @@ class Window(QtGui.QMainWindow):
         t = (t1 + t2) / 2
         offset = t * normal.magnitude2()
         self.lines.append(geo.Line(normal, offset))
-        self.selected_segments.clear()
+        self.selected.clear()
         self.update_actions()
         self.ui.canvas.update()

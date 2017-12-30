@@ -9,7 +9,7 @@ class Point(object):
         return 'geo.Point(%s, %s)' % (self.x, self.y)
 
     def __eq__(self, other):
-        if other is None:
+        if type(other) != type(self):
             return False
         return self.x == other.x and self.y == other.y
 
@@ -31,7 +31,7 @@ class Vector(object):
         return 'geo.Vector(%s, %s)' % (self.x, self.y)
 
     def __eq__(self, other):
-        if other is None:
+        if type(other) != type(self):
             return False
         return self.x == other.x and self.y == other.y
 
@@ -74,7 +74,7 @@ class Line(object):
         return 'geo.Line(%s, %s)' % (self.normal, self.offset)
 
     def __eq__(self, other):
-        if other is None:
+        if type(other) != type(self):
             return False
         return self.normal == other.normal and self.offset == other.offset
 
@@ -87,7 +87,7 @@ class Segment(object):
         return 'geo.Segment(%s, %s)' % (self.start, self.end)
 
     def __eq__(self, other):
-        if other is None:
+        if type(other) != type(self):
             return False
         return self.start == other.start and self.end == other.end
 
