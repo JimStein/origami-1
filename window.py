@@ -79,49 +79,16 @@ class Window(QtGui.QMainWindow):
 
     def on_canvas_paint_event(self, event):
         painter = QtGui.QPainter(self.ui.canvas)
-        pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        pen.setCosmetic(True)
-        brush = QtGui.QBrush(QtGui.QColor(0xFF, 0xFF, 0x80))
-        painter.setPen(pen)
-        painter.setBrush(brush)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        draw_points = [self.point_to_window(point) for point in self.points]
-        painter.drawPolygon(draw_points)
-
-        if self.highlight_segment:
-            pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-            painter.setPen(pen)
-            draw_points = [self.point_to_window(point) for point in self.highlight_segment.points()]
-            painter.drawLine(*draw_points)
-
-        idx = 0
-        for segment in self.selected_segments:
-            colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
-            pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-            painter.setPen(pen)
+        def draw_segment(segment):
             draw_points = [self.point_to_window(point) for point in segment.points()]
             painter.drawLine(*draw_points)
-            idx += 1
 
-        if self.highlight_point:
-            brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
-            painter.setBrush(brush)
-            painter.setPen(Qt.NoPen)
-            painter.drawEllipse(self.point_to_window(self.highlight_point), 3, 3)
-
-        idx = 0
-        for point in self.selected_points:
-            colors = [(0x00, 0xFF, 0x80), (0x00, 0x80, 0x40)]
-            brush = QtGui.QBrush(QtGui.QColor(*colors[idx]))
-            painter.setBrush(brush)
-            painter.setPen(Qt.NoPen)
+        def draw_point(point):
             painter.drawEllipse(self.point_to_window(point), 3, 3)
-            idx += 1
 
-        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        painter.setPen(pen)
-        for line in self.lines:
+        def draw_line(line):
             if abs(line.normal.x) > abs(line.normal.y):
                 x0 = line.offset / line.normal.x
                 x1 = (line.offset - line.normal.y) / line.normal.x
@@ -132,6 +99,48 @@ class Window(QtGui.QMainWindow):
                 points = [geo.Point(0, y0), geo.Point(1, y1)]
             draw_points = [self.point_to_window(point) for point in points]
             painter.drawLine(*draw_points)
+
+        def draw_polygon(points):
+            draw_points = [self.point_to_window(point) for point in points]
+            painter.drawPolygon(draw_points)
+
+        pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        brush = QtGui.QBrush(QtGui.QColor(0xFF, 0xFF, 0x80))
+        painter.setPen(pen)
+        painter.setBrush(brush)
+        draw_polygon(self.points)
+
+        if self.highlight_segment:
+            pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            painter.setPen(pen)
+            draw_segment(self.highlight_segment)
+
+        idx = 0
+        for segment in self.selected_segments:
+            colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
+            pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            painter.setPen(pen)
+            draw_segment(segment)
+            idx += 1
+
+        painter.setPen(Qt.NoPen)
+        if self.highlight_point:
+            brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
+            painter.setBrush(brush)
+            draw_point(self.highlight_point)
+
+        idx = 0
+        for point in self.selected_points:
+            colors = [(0x00, 0xFF, 0x80), (0x00, 0x80, 0x40)]
+            brush = QtGui.QBrush(QtGui.QColor(*colors[idx]))
+            painter.setBrush(brush)
+            draw_point(point)
+            idx += 1
+
+        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        painter.setPen(pen)
+        for line in self.lines:
+            draw_line(line)
 
     def on_canvas_mouse_release_event(self, event):
         mouse_point = self.window_to_point(event.pos())
