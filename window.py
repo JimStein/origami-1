@@ -71,8 +71,16 @@ class Window(QtGui.QMainWindow):
                 length2b = (mouse_point - last_point).magnitude2()
                 if length2a < length2 and length2b < length2:
                     found_line = line
-                break
+                    break
             last_point = point
+
+        if not found_line:
+            for line in self.lines:
+                offset = (mouse_point - geo.Point(0, 0)) * line.normal
+                if abs(offset - line.offset) <= threshold:
+                    found_line = line
+                    break
+
         return found_line
 
     def on_canvas_paint_event(self, event):
@@ -113,10 +121,10 @@ class Window(QtGui.QMainWindow):
             if highlight in self.selected or self.num_selected(type(highlight)) == 2:
                 highlight = None
 
-        if highlight and isinstance(highlight, geo.Line):
-            pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-            painter.setPen(pen)
-            draw_line(highlight)
+        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        painter.setPen(pen)
+        for line in self.lines:
+            draw_line(line)
 
         idx = 0
         for selected in self.selected:
@@ -128,13 +136,8 @@ class Window(QtGui.QMainWindow):
             draw_line(selected)
             idx += 1
 
-        painter.setPen(Qt.NoPen)
-        if highlight and isinstance(highlight, geo.Point):
-            brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
-            painter.setBrush(brush)
-            draw_point(highlight)
-
         idx = 0
+        painter.setPen(Qt.NoPen)
         for selected in self.selected:
             if not isinstance(selected, geo.Point):
                 continue
@@ -144,10 +147,17 @@ class Window(QtGui.QMainWindow):
             draw_point(selected)
             idx += 1
 
-        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        painter.setPen(pen)
-        for line in self.lines:
-            draw_line(line)
+        if highlight:
+            if isinstance(highlight, geo.Line):
+                pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+                painter.setPen(pen)
+                draw_line(highlight)
+
+            elif isinstance(highlight, geo.Point):
+                brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
+                painter.setBrush(brush)
+                painter.setPen(Qt.NoPen)
+                draw_point(highlight)
 
     def num_selected(self, type):
         count = 0
