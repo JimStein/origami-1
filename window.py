@@ -70,10 +70,10 @@ class Window(QtGui.QMainWindow):
         length2b = (point - segment.end).magnitude2()
         return (length2a < length2 and length2b < length2)
 
-    def intersect_lines(self, line1, line2):
-        det = line1.normal.x * line2.normal.y - line1.normal.y * line2.normal.x
-        xdet = line1.offset * line2.normal.y - line1.normal.y * line2.offset
-        ydet = line1.normal.x * line2.offset - line1.offset * line2.normal.x
+    def intersect_lines(self, a, b):
+        det = a.normal.x * b.normal.y - a.normal.y * b.normal.x
+        xdet = a.offset * b.normal.y - a.normal.y * b.offset
+        ydet = a.normal.x * b.offset - a.offset * b.normal.x
 
         if abs(xdet) < abs(1000 * det) and abs(ydet) < abs(1000 * det):
             x = xdet / det
@@ -282,9 +282,9 @@ class Window(QtGui.QMainWindow):
         self.resize_canvas()
 
     def on_action_points(self):
-        p1 = self.selected[0]
-        p2 = self.selected[1]
-        segment = geo.Segment(p1, p2)
+        point0 = self.selected[0]
+        point1 = self.selected[1]
+        segment = geo.Segment(point0, point1)
         line = segment.line()
         self.add_intersections(line)
         self.lines.append(line)
@@ -293,10 +293,10 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.update()
 
     def on_action_point_point(self):
-        p1 = self.selected[0]
-        p2 = self.selected[1]
-        normal = p2 - p1
-        offset = (normal * (p1 - geo.Point(0, 0)) + normal * (p2 - geo.Point(0, 0))) / 2
+        point0 = self.selected[0]
+        point1 = self.selected[1]
+        normal = point1 - point0
+        offset = (normal * (point0 - geo.Point(0, 0)) + normal * (point1 - geo.Point(0, 0))) / 2
         line = geo.Line(normal, offset)
         self.add_intersections(line)
         self.lines.append(line)
@@ -305,25 +305,25 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.update()
 
     def on_action_line_line(self):
-        line1 = self.selected[0]
-        line2 = self.selected[1]
+        line0 = self.selected[0]
+        line1 = self.selected[1]
 
-        theta1 = math.atan2(line1.normal.y, line1.normal.x)
-        theta2 = math.atan2(line2.normal.y, line2.normal.x)
+        theta1 = math.atan2(line0.normal.y, line0.normal.x)
+        theta2 = math.atan2(line1.normal.y, line1.normal.x)
         theta = (theta1 + theta2) / 2
 
         cos = math.cos(theta)
         sin = math.sin(theta)
         lines = []
         for normal in (geo.Vector(cos, sin), geo.Vector(-sin, cos)):
+            if abs(line0.offset) > abs(1000 * (line0.normal * normal)):
+                continue
             if abs(line1.offset) > abs(1000 * (line1.normal * normal)):
                 continue
-            if abs(line2.offset) > abs(1000 * (line2.normal * normal)):
-                continue
 
+            t0 = line0.offset / (line0.normal * normal)
             t1 = line1.offset / (line1.normal * normal)
-            t2 = line2.offset / (line2.normal * normal)
-            offset = (t1 + t2) / 2
+            offset = (t0 + t1) / 2
             lines.append(geo.Line(normal, offset))
 
         for line in lines:
@@ -360,13 +360,13 @@ class Window(QtGui.QMainWindow):
                 point = selected
             elif isinstance(selected, geo.Line):
                 lines.append(selected)
-        line1 = lines[0]
-        line2 = lines[1]
+        line0 = lines[0]
+        line1 = lines[1]
 
-        parallel = geo.Line(line1.normal, line1.normal * (point - geo.Point(0, 0)))
-        intersection = self.intersect_lines(parallel, line2)
+        parallel = geo.Line(line0.normal, line0.normal * (point - geo.Point(0, 0)))
+        intersection = self.intersect_lines(parallel, line1)
         if intersection:
-            normal = geo.Vector(-line1.normal.y, line1.normal.x)
+            normal = geo.Vector(-line0.normal.y, line0.normal.x)
             offset = (normal * (point - geo.Point(0, 0)) + normal * (intersection - geo.Point(0, 0))) / 2
 
             line = geo.Line(normal, offset)
