@@ -95,14 +95,20 @@ class Window(QtGui.QMainWindow):
             painter.drawEllipse(self.point_to_window(point), 3, 3)
 
         def draw_line(line):
+            min = self.window_to_point(QtCore.QPoint(0, 0))
+            max = self.window_to_point(QtCore.QPoint(self.ui.canvas.width(), self.ui.canvas.height()))
             if abs(line.normal.x) > abs(line.normal.y):
-                x0 = line.offset / line.normal.x
-                x1 = (line.offset - line.normal.y) / line.normal.x
-                points = [geo.Point(x0, 0), geo.Point(x1, 1)]
+                y0 = min.y
+                x0 = (line.offset - line.normal.y * y0) / line.normal.x
+                y1 = max.y
+                x1 = (line.offset - line.normal.y * y1) / line.normal.x
             else:
-                y0 = line.offset / line.normal.y
-                y1 = (line.offset - line.normal.x) / line.normal.y
-                points = [geo.Point(0, y0), geo.Point(1, y1)]
+                x0 = min.x
+                y0 = (line.offset - line.normal.x * x0) / line.normal.y
+                x1 = max.x
+                y1 = (line.offset - line.normal.x * x1) / line.normal.y
+
+            points = [geo.Point(x0, y0), geo.Point(x1, y1)]
             draw_points = [self.point_to_window(point) for point in points]
             painter.drawLine(*draw_points)
 
