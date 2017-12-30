@@ -24,6 +24,8 @@ class Window(QtGui.QMainWindow):
         self.points = [(0, 0), (0, 1), (1, 1), (1, 0)]
         self.highlight_point = None
         self.selected_point = None
+        self.highlight_segment = None
+        self.selected_segment = None
 
     def point_to_window(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
@@ -48,6 +50,29 @@ class Window(QtGui.QMainWindow):
                 break
         return found_point
 
+    def find_segment_near(self, mouse_point):
+        found_segment = None
+        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        threshold = 10 / size
+        last_point = self.points[-1]
+        for point in self.points:
+            b = point[0] - last_point[0]
+            a = point[1] - last_point[1]
+            c = a * point[0] + b * point[1]
+
+            d = a * mouse_point[0] + b * mouse_point[1]
+            if abs(d - c) <= threshold:
+                length = a * a + b * b
+                dx1 = mouse_point[0] - point[0]
+                dy1 = mouse_point[1] - point[1]
+                dx2 = mouse_point[0] - last_point[0]
+                dy2 = mouse_point[1] - last_point[1]
+                if dx1 * dx1 + dy1 * dy1 < length and dx2 * dx2 + dy2 * dy2 < length:
+                    found_segment = (last_point, point)
+                break
+            last_point = point
+        return found_segment
+
     def on_canvas_paint_event(self, event):
         painter = QtGui.QPainter(self.ui.canvas)
         pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
@@ -64,7 +89,7 @@ class Window(QtGui.QMainWindow):
             brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
             painter.setBrush(brush)
             painter.setPen(Qt.NoPen)
-            painter.drawEllipse(QtCore.QPoint(*self.point_to_window(self.highlight_point)), 2, 2)
+            painter.drawEllipse(QtCore.QPoint(*self.point_to_window(self.highlight_point)), 3, 3)
 
         if self.selected_point:
             brush = QtGui.QBrush(QtGui.QColor(0xFF, 0x00, 0x00))
@@ -72,22 +97,63 @@ class Window(QtGui.QMainWindow):
             painter.setPen(Qt.NoPen)
             painter.drawEllipse(QtCore.QPoint(*self.point_to_window(self.selected_point)), 3, 3)
 
+        if self.highlight_segment:
+            pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            painter.setPen(pen)
+            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in self.highlight_segment]
+            painter.drawLine(*draw_points)
+
+        if self.selected_segment:
+            pen = QtGui.QPen(QtGui.QColor(0xFF, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            painter.setPen(pen)
+            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in self.selected_segment]
+            painter.drawLine(*draw_points)
+
     def on_canvas_mouse_release_event(self, event):
         mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
         selected_point = self.find_point_near(mouse_point)
+        if selected_point:
+            selected_segment = None
+        else:
+            selected_segment = self.find_segment_near(mouse_point)
+
         if selected_point == self.selected_point:
             selected_point = None
 
+        if selected_segment == self.selected_segment:
+            selected_segment = None
+
         if selected_point != self.selected_point:
             self.selected_point = selected_point
+            if selected_point:
+                self.highlight_point = None
+            self.ui.canvas.update()
+
+        if selected_segment != self.selected_segment:
+            self.selected_segment = selected_segment
+            if selected_segment:
+                self.highlight_segment = None
             self.ui.canvas.update()
 
     def on_canvas_mouse_move_event(self, event):
         mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
         highlight_point = self.find_point_near(mouse_point)
+        if highlight_point == self.selected_point:
+            highlight_point = None
+
+        if highlight_point:
+            highlight_segment = None
+        else:
+            highlight_segment = self.find_segment_near(mouse_point)
+            if highlight_segment == self.selected_segment:
+                highlight_segment = None
 
         if highlight_point != self.highlight_point:
             self.highlight_point = highlight_point
+            self.ui.canvas.update()
+
+        if highlight_segment != self.highlight_segment:
+            self.highlight_segment = highlight_segment
             self.ui.canvas.update()
 
     def on_scroll_area_resize_event(self, event):
