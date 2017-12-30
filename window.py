@@ -3,6 +3,8 @@ from PySide.QtCore import Qt
 
 from window_ui import Ui_MainWindow
 
+import math
+
 class Window(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
@@ -15,8 +17,11 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.mouseMoveEvent = self.on_canvas_mouse_move_event
         self.ui.scrollArea.resizeEvent = self.on_scroll_area_resize_event
 
-        self.ui.actionZoomIn.triggered.connect(self.on_zoom_in)
-        self.ui.actionZoomOut.triggered.connect(self.on_zoom_out)
+        self.ui.actionZoomIn.triggered.connect(self.on_action_zoom_in)
+        self.ui.actionZoomOut.triggered.connect(self.on_action_zoom_out)
+        self.ui.actionPoints.triggered.connect(self.on_action_points)
+        self.ui.actionPointPoint.triggered.connect(self.on_action_point_point)
+        self.ui.actionLineLine.triggered.connect(self.on_action_line_line)
 
         self.ui.canvas.setMouseTracking(True)
 
@@ -26,6 +31,8 @@ class Window(QtGui.QMainWindow):
         self.selected_points = []
         self.highlight_segment = None
         self.selected_segments = []
+        self.lines = []
+        self.update_actions()
 
     def point_to_window(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
@@ -56,8 +63,8 @@ class Window(QtGui.QMainWindow):
         threshold = 10 / size
         last_point = self.points[-1]
         for point in self.points:
+            a = last_point[1] - point[1]
             b = point[0] - last_point[0]
-            a = point[1] - last_point[1]
             c = a * point[0] + b * point[1]
 
             d = a * mouse_point[0] + b * mouse_point[1]
@@ -115,6 +122,20 @@ class Window(QtGui.QMainWindow):
             painter.drawEllipse(QtCore.QPoint(*self.point_to_window(point)), 3, 3)
             idx += 1
 
+        pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+        painter.setPen(pen)
+        for line in self.lines:
+            if abs(line[0]) > abs(line[1]):
+                x0 = line[2] / line[0]
+                x1 = (line[2] - line[1]) / line[0]
+                points = [(x0, 0), (x1, 1)]
+            else:
+                y0 = line[2] / line[1]
+                y1 = (line[2] - line[0]) / line[1]
+                points = [(0, y0), (1, y1)]
+            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in points]
+            painter.drawLine(*draw_points)
+
     def on_canvas_mouse_release_event(self, event):
         mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
         selected_point = self.find_point_near(mouse_point)
@@ -138,6 +159,7 @@ class Window(QtGui.QMainWindow):
                 self.selected_points.clear()
                 self.selected_segments.clear()
         self.ui.canvas.update()
+        self.update_actions()
 
     def on_canvas_mouse_move_event(self, event):
         mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
@@ -190,10 +212,66 @@ class Window(QtGui.QMainWindow):
         self.ui.scrollArea.horizontalScrollBar().setValue(x * hmax)
         self.ui.scrollArea.verticalScrollBar().setValue(y * vmax)
 
-    def on_zoom_in(self):
+    def update_actions(self):
+        self.ui.actionPoints.setEnabled(len(self.selected_points) == 2 and len(self.selected_segments) == 0)
+        self.ui.actionPointPoint.setEnabled(len(self.selected_points) == 2 and len(self.selected_segments) == 0)
+        self.ui.actionLineLine.setEnabled(len(self.selected_points) == 0 and len(self.selected_segments) == 2)
+
+    def on_action_zoom_in(self):
         self.zoom *= 1.25
         self.resize_canvas()
 
-    def on_zoom_out(self):
+    def on_action_zoom_out(self):
         self.zoom /= 1.25
         self.resize_canvas()
+
+    def on_action_points(self):
+        p1 = self.selected_points[0]
+        p2 = self.selected_points[1]
+        a = p2[1] - p1[1]
+        b = p1[0] - p2[0]
+        c = a * p1[0] + b * p1[1]
+        self.lines.append((a, b, c))
+        self.selected_points.clear()
+        self.update_actions()
+        self.ui.canvas.update()
+
+    def on_action_point_point(self):
+        p1 = self.selected_points[0]
+        p2 = self.selected_points[1]
+        a = p1[0] - p2[0]
+        b = p1[1] - p2[1]
+        c = (a * p1[0] + b * p1[1] + a * p2[0] + b * p2[1]) / 2
+        self.lines.append((a, b, c))
+        self.selected_points.clear()
+        self.update_actions()
+        self.ui.canvas.update()
+
+    def on_action_line_line(self):
+        l1 = self.selected_segments[0]
+        a1 = l1[1][1] - l1[0][1]
+        b1 = l1[0][0] - l1[1][0]
+        c1 = a1 * l1[0][0] + b1 * l1[0][1]
+        l2 = self.selected_segments[1]
+        a2 = l2[1][1] - l2[0][1]
+        b2 = l2[0][0] - l2[1][0]
+        c2 = a2 * l2[0][0] + b2 * l2[0][1]
+
+        theta1 = math.atan2(-a1, b1)
+        theta2 = math.atan2(-a2, b2)
+        if theta1 - theta2 > math.pi/2:
+            theta2 += math.pi
+        if theta2 - theta1 > math.pi/2:
+            theta1 += math.pi
+        theta = (theta1 + theta2) / 2
+
+        a = -math.sin(theta)
+        b = math.cos(theta)
+        t1 = c1 / (a1 * a + b1 * b)
+        t2 = c2 / (a2 * a + b2 * b)
+        t = (t1 + t2) / 2
+        c = t * (a * a + b * b)
+        self.lines.append((a, b, c))
+        self.selected_segments.clear()
+        self.update_actions()
+        self.ui.canvas.update()

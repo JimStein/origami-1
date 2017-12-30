@@ -35,7 +35,7 @@
          <x>0</x>
          <y>0</y>
          <width>782</width>
-         <height>520</height>
+         <height>518</height>
         </rect>
        </property>
       </widget>
@@ -66,6 +66,10 @@
    </attribute>
    <addaction name="actionZoomIn"/>
    <addaction name="actionZoomOut"/>
+   <addaction name="separator"/>
+   <addaction name="actionPoints"/>
+   <addaction name="actionPointPoint"/>
+   <addaction name="actionLineLine"/>
   </widget>
   <action name="actionZoomIn">
    <property name="text">
@@ -75,6 +79,21 @@
   <action name="actionZoomOut">
    <property name="text">
     <string>Zoom Out</string>
+   </property>
+  </action>
+  <action name="actionPoints">
+   <property name="text">
+    <string>Points</string>
+   </property>
+  </action>
+  <action name="actionPointPoint">
+   <property name="text">
+    <string>Point-Point</string>
+   </property>
+  </action>
+  <action name="actionLineLine">
+   <property name="text">
+    <string>Line-Line</string>
    </property>
   </action>
  </widget>
