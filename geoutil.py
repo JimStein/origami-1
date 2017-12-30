@@ -66,9 +66,9 @@ def huzita_justin_2(point0, point1):
     return geo.Line(normal, offset)
 
 def huzita_justin_3(line0, line1):
-    theta1 = math.atan2(line0.normal.y, line0.normal.x)
-    theta2 = math.atan2(line1.normal.y, line1.normal.x)
-    theta = (theta1 + theta2) / 2
+    theta0 = math.atan2(line0.normal.y, line0.normal.x)
+    theta1 = math.atan2(line1.normal.y, line1.normal.x)
+    theta = (theta0 + theta1) / 2
 
     cos = math.cos(theta)
     sin = math.sin(theta)
