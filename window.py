@@ -261,19 +261,19 @@ class Window(QtGui.QMainWindow):
 
     def on_action_points(self):
         line = geoutil.huzita_justin_1(self.selected[0], self.selected[1])
-        self.add_line(line)
         self.selected.clear()
+        self.add_line(line)
 
     def on_action_point_point(self):
         line = geoutil.huzita_justin_2(self.selected[0], self.selected[1])
-        self.add_line(line)
         self.selected.clear()
+        self.add_line(line)
 
     def on_action_line_line(self):
         lines = geoutil.huzita_justin_3(self.selected[0], self.selected[1])
         if lines:
-            self.add_lines(lines)
             self.selected.clear()
+            self.add_lines(lines)
 
     def on_action_line_point(self):
         for selected in self.selected:
@@ -283,8 +283,8 @@ class Window(QtGui.QMainWindow):
                 line = selected
 
         line = geoutil.huzita_justin_4(point, line)
-        self.add_line(line)
         self.selected.clear()
+        self.add_line(line)
 
     def on_action_line_point_line(self):
         lines = []
@@ -296,5 +296,5 @@ class Window(QtGui.QMainWindow):
 
         line = geoutil.huzita_justin_7(point, lines[0], lines[1])
         if line:
-            self.add_line(line)
             self.selected.clear()
+            self.add_line(line)
