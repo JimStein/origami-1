@@ -3,6 +3,8 @@ from PySide.QtCore import Qt
 
 from window_ui import Ui_MainWindow
 
+import geo
+
 import math
 
 class Window(QtGui.QMainWindow):
@@ -26,7 +28,7 @@ class Window(QtGui.QMainWindow):
         self.ui.canvas.setMouseTracking(True)
 
         self.zoom = 0.9
-        self.points = [(0, 0), (0, 1), (1, 1), (1, 0)]
+        self.points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
         self.highlight_point = None
         self.selected_points = []
         self.highlight_segment = None
@@ -37,22 +39,20 @@ class Window(QtGui.QMainWindow):
     def point_to_window(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         margin = 10
-        return (margin + point[0] * (size - 2 * margin), margin + point[1] * (size - 2 * margin))
+        return QtCore.QPoint(margin + point.x * (size - 2 * margin), margin + point.y * (size - 2 * margin))
 
     def window_to_point(self, point):
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         margin = 10
-        return ((point[0] - margin) / (size - 2 * margin), (point[1] - margin) / (size - 2 * margin))
+        return geo.Point((point.x() - margin) / (size - 2 * margin), (point.y() - margin) / (size - 2 * margin))
 
     def find_point_near(self, mouse_point):
         found_point = None
         size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
         threshold = 10 / size
         for point in self.points:
-            dx = mouse_point[0] - point[0]
-            dy = mouse_point[1] - point[1]
-            distance = dx * dx + dy * dy
-            if distance <= threshold * threshold:
+            distance2 = (mouse_point - point).magnitude2()
+            if distance2 <= threshold * threshold:
                 found_point = point
                 break
         return found_point
@@ -63,19 +63,16 @@ class Window(QtGui.QMainWindow):
         threshold = 10 / size
         last_point = self.points[-1]
         for point in self.points:
-            a = last_point[1] - point[1]
-            b = point[0] - last_point[0]
-            c = a * point[0] + b * point[1]
+            segment = geo.Segment(last_point, point)
+            line = segment.line()
+            offset = (mouse_point - geo.Point(0, 0)) * line.normal
 
-            d = a * mouse_point[0] + b * mouse_point[1]
-            if abs(d - c) <= threshold:
-                length = a * a + b * b
-                dx1 = mouse_point[0] - point[0]
-                dy1 = mouse_point[1] - point[1]
-                dx2 = mouse_point[0] - last_point[0]
-                dy2 = mouse_point[1] - last_point[1]
-                if dx1 * dx1 + dy1 * dy1 < length and dx2 * dx2 + dy2 * dy2 < length:
-                    found_segment = (last_point, point)
+            if abs(offset - line.offset) <= threshold:
+                length2 = segment.length2()
+                length2a = (mouse_point - point).magnitude2()
+                length2b = (mouse_point - last_point).magnitude2()
+                if length2a < length2 and length2b < length2:
+                    found_segment = segment
                 break
             last_point = point
         return found_segment
@@ -89,13 +86,13 @@ class Window(QtGui.QMainWindow):
         painter.setBrush(brush)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in self.points]
+        draw_points = [self.point_to_window(point) for point in self.points]
         painter.drawPolygon(draw_points)
 
         if self.highlight_segment:
             pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in self.highlight_segment]
+            draw_points = [self.point_to_window(point) for point in self.highlight_segment.points()]
             painter.drawLine(*draw_points)
 
         idx = 0
@@ -103,7 +100,7 @@ class Window(QtGui.QMainWindow):
             colors = [(0xFF, 0x80, 0x00), (0x80, 0x40, 0x00)]
             pen = QtGui.QPen(QtGui.QColor(*colors[idx]), 3, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
             painter.setPen(pen)
-            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in segment]
+            draw_points = [self.point_to_window(point) for point in segment.points()]
             painter.drawLine(*draw_points)
             idx += 1
 
@@ -111,7 +108,7 @@ class Window(QtGui.QMainWindow):
             brush = QtGui.QBrush(QtGui.QColor(0x00, 0x00, 0x00))
             painter.setBrush(brush)
             painter.setPen(Qt.NoPen)
-            painter.drawEllipse(QtCore.QPoint(*self.point_to_window(self.highlight_point)), 3, 3)
+            painter.drawEllipse(self.point_to_window(self.highlight_point), 3, 3)
 
         idx = 0
         for point in self.selected_points:
@@ -119,25 +116,25 @@ class Window(QtGui.QMainWindow):
             brush = QtGui.QBrush(QtGui.QColor(*colors[idx]))
             painter.setBrush(brush)
             painter.setPen(Qt.NoPen)
-            painter.drawEllipse(QtCore.QPoint(*self.point_to_window(point)), 3, 3)
+            painter.drawEllipse(self.point_to_window(point), 3, 3)
             idx += 1
 
         pen = QtGui.QPen(QtGui.QColor(0x80, 0x80, 0x80), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
         painter.setPen(pen)
         for line in self.lines:
-            if abs(line[0]) > abs(line[1]):
-                x0 = line[2] / line[0]
-                x1 = (line[2] - line[1]) / line[0]
-                points = [(x0, 0), (x1, 1)]
+            if abs(line.normal.x) > abs(line.normal.y):
+                x0 = line.offset / line.normal.x
+                x1 = (line.offset - line.normal.y) / line.normal.x
+                points = [geo.Point(x0, 0), geo.Point(x1, 1)]
             else:
-                y0 = line[2] / line[1]
-                y1 = (line[2] - line[0]) / line[1]
-                points = [(0, y0), (1, y1)]
-            draw_points = [QtCore.QPoint(*self.point_to_window(point)) for point in points]
+                y0 = line.offset / line.normal.y
+                y1 = (line.offset - line.normal.x) / line.normal.y
+                points = [geo.Point(0, y0), geo.Point(1, y1)]
+            draw_points = [self.point_to_window(point) for point in points]
             painter.drawLine(*draw_points)
 
     def on_canvas_mouse_release_event(self, event):
-        mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
+        mouse_point = self.window_to_point(event.pos())
         selected_point = self.find_point_near(mouse_point)
         if selected_point:
             if selected_point in self.selected_points:
@@ -162,7 +159,7 @@ class Window(QtGui.QMainWindow):
         self.update_actions()
 
     def on_canvas_mouse_move_event(self, event):
-        mouse_point = self.window_to_point((event.pos().x(), event.pos().y()))
+        mouse_point = self.window_to_point(event.pos())
         highlight_point = self.find_point_near(mouse_point)
         if highlight_point in self.selected_points or len(self.selected_points) == 2:
             highlight_point = None
@@ -228,10 +225,8 @@ class Window(QtGui.QMainWindow):
     def on_action_points(self):
         p1 = self.selected_points[0]
         p2 = self.selected_points[1]
-        a = p2[1] - p1[1]
-        b = p1[0] - p2[0]
-        c = a * p1[0] + b * p1[1]
-        self.lines.append((a, b, c))
+        segment = geo.Segment(p1, p2)
+        self.lines.append(segment.line())
         self.selected_points.clear()
         self.update_actions()
         self.ui.canvas.update()
@@ -239,39 +234,31 @@ class Window(QtGui.QMainWindow):
     def on_action_point_point(self):
         p1 = self.selected_points[0]
         p2 = self.selected_points[1]
-        a = p1[0] - p2[0]
-        b = p1[1] - p2[1]
-        c = (a * p1[0] + b * p1[1] + a * p2[0] + b * p2[1]) / 2
-        self.lines.append((a, b, c))
+        normal = p2 - p1
+        offset = (normal * (p1 - geo.Point(0, 0)) + normal * (p2 - geo.Point(0, 0))) / 2
+        self.lines.append(geo.Line(normal, offset))
         self.selected_points.clear()
         self.update_actions()
         self.ui.canvas.update()
 
     def on_action_line_line(self):
-        l1 = self.selected_segments[0]
-        a1 = l1[1][1] - l1[0][1]
-        b1 = l1[0][0] - l1[1][0]
-        c1 = a1 * l1[0][0] + b1 * l1[0][1]
-        l2 = self.selected_segments[1]
-        a2 = l2[1][1] - l2[0][1]
-        b2 = l2[0][0] - l2[1][0]
-        c2 = a2 * l2[0][0] + b2 * l2[0][1]
+        line1 = self.selected_segments[0].line()
+        line2 = self.selected_segments[1].line()
 
-        theta1 = math.atan2(-a1, b1)
-        theta2 = math.atan2(-a2, b2)
+        theta1 = math.atan2(line1.normal.y, line1.normal.x)
+        theta2 = math.atan2(line2.normal.y, line2.normal.x)
         if theta1 - theta2 > math.pi/2:
             theta2 += math.pi
         if theta2 - theta1 > math.pi/2:
             theta1 += math.pi
         theta = (theta1 + theta2) / 2
 
-        a = -math.sin(theta)
-        b = math.cos(theta)
-        t1 = c1 / (a1 * a + b1 * b)
-        t2 = c2 / (a2 * a + b2 * b)
+        normal = geo.Vector(math.cos(theta), math.sin(theta))
+        t1 = line1.offset / (line1.normal * normal)
+        t2 = line2.offset / (line2.normal * normal)
         t = (t1 + t2) / 2
-        c = t * (a * a + b * b)
-        self.lines.append((a, b, c))
+        offset = t * normal.magnitude2()
+        self.lines.append(geo.Line(normal, offset))
         self.selected_segments.clear()
         self.update_actions()
         self.ui.canvas.update()
