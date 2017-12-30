@@ -56,17 +56,19 @@ class Window(QtGui.QMainWindow):
         self.lines = []
         self.update_actions()
 
+    def canvas_size(self):
+        return min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+
     def point_to_window(self, point):
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        size = self.canvas_size()
         return QtCore.QPoint(MARGIN + point.x * (size - 2 * MARGIN), MARGIN + point.y * (size - 2 * MARGIN))
 
     def window_to_point(self, point):
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        size = self.canvas_size()
         return geo.Point((point.x() - MARGIN) / (size - 2 * MARGIN), (point.y() - MARGIN) / (size - 2 * MARGIN))
 
     def selection_threshold(self):
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
-        return SELECTION_THRESHOLD / size
+        return SELECTION_THRESHOLD / self.canvas_size()
 
     def find_intersection_near(self, mouse_point):
         found_point = None
@@ -211,22 +213,14 @@ class Window(QtGui.QMainWindow):
         self.resize_canvas()
 
     def resize_canvas(self):
-        size = min(self.ui.scrollArea.width(), self.ui.scrollArea.height()) * self.zoom
+        size = self.canvas_size()
 
         hmax = self.ui.scrollArea.horizontalScrollBar().maximum()
         hvalue = self.ui.scrollArea.horizontalScrollBar().value()
         vmax = self.ui.scrollArea.verticalScrollBar().maximum()
         vvalue = self.ui.scrollArea.verticalScrollBar().value()
-
-        if hmax:
-            x = hvalue / hmax
-        else:
-            x = 0.5
-
-        if vmax:
-            y = vvalue / vmax
-        else:
-            y = 0.5
+        x = hvalue / hmax if hmax else 0.5
+        y = vvalue / vmax if vmax else 0.5
 
         self.ui.canvas.setMinimumSize(QtCore.QSize(size, size))
         self.ui.canvas.setMaximumSize(QtCore.QSize(size, size))
