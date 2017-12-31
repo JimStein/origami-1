@@ -97,18 +97,17 @@ def huzita_justin_5(point0, point1, line):
     disc = radius.magnitude2() - offset.magnitude2()
 
     lines = []
-    if disc >= 0:
+    if disc == 0:
+        lines.append(huzita_justin_2(start, point1))
+    elif disc > 0:
         d = math.sqrt(disc)
         direction = perpendicular_vector(line.normal)
 
-        p0 = start + direction * d
-        l = line_from_points(point1, p0)
-        lines.append(perpendicular_line(l, point0))
+        p = start + direction * d
+        lines.append(huzita_justin_2(p, point1))
 
-        if d > 0:
-            p1 = start - direction * d
-            l = line_from_points(point1, p1)
-            lines.append(perpendicular_line(l, point0))
+        p = start - direction * d
+        lines.append(huzita_justin_2(p, point1))
 
     return lines
 
@@ -116,8 +115,6 @@ def huzita_justin_7(point, line0, line1):
     parallel = parallel_line(line0, point)
     intersection = intersect_lines(parallel, line1)
     if intersection:
-        normal = perpendicular_vector(line0.normal)
-        offset = (normal * vector(point) + normal * vector(intersection)) / 2
-        return geo.Line(normal, offset)
+        return huzita_justin_2(point, intersection)
     else:
         return None
