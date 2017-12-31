@@ -89,6 +89,29 @@ def huzita_justin_3(line0, line1):
 def huzita_justin_4(point, line):
     return perpendicular_line(line, point)
 
+def huzita_justin_5(point0, point1, line):
+    radius = point1 - point0
+    perp = perpendicular_line(line, point0)
+    start = intersect_lines(perp, line)
+    offset = start - point0
+    disc = radius.magnitude2() - offset.magnitude2()
+
+    lines = []
+    if disc >= 0:
+        d = math.sqrt(disc)
+        direction = perpendicular_vector(line.normal)
+
+        p0 = start + direction * d
+        l = line_from_points(point1, p0)
+        lines.append(perpendicular_line(l, point0))
+
+        if d > 0:
+            p1 = start - direction * d
+            l = line_from_points(point1, p1)
+            lines.append(perpendicular_line(l, point0))
+
+    return lines
+
 def huzita_justin_7(point, line0, line1):
     parallel = parallel_line(line0, point)
     intersection = intersect_lines(parallel, line1)

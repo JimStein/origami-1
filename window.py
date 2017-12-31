@@ -38,6 +38,7 @@ class Window(QtGui.QMainWindow):
         self.ui.actionPointPoint.triggered.connect(self.on_action_point_point)
         self.ui.actionLineLine.triggered.connect(self.on_action_line_line)
         self.ui.actionLinePoint.triggered.connect(self.on_action_line_point)
+        self.ui.actionPointPointLine.triggered.connect(self.on_action_point_point_line)
         self.ui.actionLinePointLine.triggered.connect(self.on_action_line_point_line)
 
         self.ui.canvas.setMouseTracking(True)
@@ -236,6 +237,7 @@ class Window(QtGui.QMainWindow):
         self.ui.actionPointPoint.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 0)
         self.ui.actionLineLine.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 2)
         self.ui.actionLinePoint.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 1)
+        self.ui.actionPointPointLine.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 1)
         self.ui.actionLinePointLine.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 2)
 
     def add_lines(self, lines):
@@ -291,6 +293,19 @@ class Window(QtGui.QMainWindow):
         line = geoutil.huzita_justin_4(point, line)
         self.selected.clear()
         self.add_line(line)
+
+    def on_action_point_point_line(self):
+        points = []
+        for selected in self.selected:
+            if isinstance(selected, geo.Point):
+                points.append(selected)
+            elif isinstance(selected, geo.Line):
+                line = selected
+
+        lines = geoutil.huzita_justin_5(points[0], points[1], line)
+        if lines:
+            self.selected.clear()
+            self.add_lines(lines)
 
     def on_action_line_point_line(self):
         lines = []
