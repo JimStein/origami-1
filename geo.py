@@ -22,6 +22,9 @@ class Point(object):
         else:
             return Point(self.x - other.x, self.y - other.y)
 
+    def vector(self):
+        return self - Point(0, 0)
+
 class Vector(object):
     def __init__(self, x, y):
         self.x = x
@@ -93,12 +96,6 @@ class Segment(object):
 
     def points(self):
         return [self.start, self.end]
-
-    def line(self):
-        v = self.end - self.start
-        normal = Vector(v.y, -v.x).normalize()
-        offset = (self.start - Point(0, 0)) * normal
-        return Line(normal, offset)
 
     def length(self):
         return (self.end - self.start).magnitude()

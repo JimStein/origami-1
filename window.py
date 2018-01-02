@@ -85,7 +85,7 @@ class Window(QtGui.QMainWindow):
         found_line = None
         threshold = self.selection_threshold()
         for segment in self.segments:
-            line = segment.line()
+            line = geoutil.line_from_segment(segment)
             if geoutil.distance_to_line(mouse_point, line) <= threshold and geoutil.is_point_within_segment(mouse_point, segment):
                 found_line = line
                 break
