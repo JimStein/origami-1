@@ -5,6 +5,7 @@ from window_ui import Ui_MainWindow
 
 import geo
 import geoutil
+import paper
 
 SELECTION_THRESHOLD = 10
 MARGIN = 10
@@ -46,12 +47,12 @@ class Window(QtGui.QMainWindow):
         self.zoom = 1
 
         points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
-        self.polygon = geo.Polygon(points)
-        self.segments = self.polygon.segments()
-        self.intersections = points
+        polygon = geo.Polygon(points)
+        self.sheet = paper.Sheet(polygon)
         self.highlight = None
         self.selected = []
         self.lines = []
+        self.intersections = []
         self.update_actions()
 
     def canvas_size(self):
@@ -68,20 +69,25 @@ class Window(QtGui.QMainWindow):
     def selection_threshold(self):
         return SELECTION_THRESHOLD / self.canvas_size()
 
-    def find_intersection_near(self, mouse_point):
-        found_point = None
+    def find_point_near(self, mouse_point):
         threshold = self.selection_threshold()
+
+        for point in self.sheet.points:
+            distance2 = (mouse_point - point).magnitude2()
+            if distance2 <= threshold * threshold:
+                return point
+
         for point in self.intersections:
             distance2 = (mouse_point - point).magnitude2()
             if distance2 <= threshold * threshold:
-                found_point = point
-                break
-        return found_point
+                return point
+
+        return None
 
     def find_line_near(self, mouse_point):
         found_line = None
         threshold = self.selection_threshold()
-        for segment in self.segments:
+        for segment in self.sheet.segments:
             line = geoutil.line_from_segment(segment)
             if geoutil.distance_to_line(mouse_point, line) <= threshold and geoutil.is_point_within_segment(mouse_point, segment):
                 found_line = line
@@ -130,7 +136,9 @@ class Window(QtGui.QMainWindow):
         brush = QtGui.QBrush(PAPER_COLOR)
         painter.setPen(pen)
         painter.setBrush(brush)
-        draw_polygon(self.polygon)
+        for layer in self.sheet.layers:
+            for facet in layer.facets:
+                draw_polygon(facet.polygon)
 
         highlight = self.highlight
         if highlight:
@@ -198,7 +206,7 @@ class Window(QtGui.QMainWindow):
 
     def on_canvas_mouse_move_event(self, event):
         mouse_point = self.window_to_point(event.pos())
-        highlight = self.find_intersection_near(mouse_point)
+        highlight = self.find_point_near(mouse_point)
         if not highlight:
             highlight = self.find_line_near(mouse_point)
 
@@ -238,7 +246,7 @@ class Window(QtGui.QMainWindow):
 
     def add_lines(self, lines):
         for line in lines:
-            for segment in self.segments:
+            for segment in self.sheet.segments:
                 point = geoutil.intersect_line_segment(line, segment)
                 if point:
                     self.intersections.append(point)
