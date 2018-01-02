@@ -46,11 +46,8 @@ class Window(QtGui.QMainWindow):
         self.zoom = 1
 
         points = [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 1), geo.Point(1, 0)]
-        self.segments = []
-        last_point = points[-1]
-        for point in points:
-            self.segments.append(geo.Segment(last_point, point))
-            last_point = point
+        self.polygon = geo.Polygon(points)
+        self.segments = self.polygon.segments()
         self.intersections = points
         self.highlight = None
         self.selected = []
@@ -125,16 +122,15 @@ class Window(QtGui.QMainWindow):
             draw_points = [self.point_to_window(point) for point in points]
             painter.drawLine(*draw_points)
 
-        def draw_polygon(points):
-            draw_points = [self.point_to_window(point) for point in points]
+        def draw_polygon(polygon):
+            draw_points = [self.point_to_window(point) for point in polygon.points]
             painter.drawPolygon(draw_points)
 
         pen = QtGui.QPen(EDGE_COLOR, LINE_WIDTH, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
         brush = QtGui.QBrush(PAPER_COLOR)
         painter.setPen(pen)
         painter.setBrush(brush)
-        points = [segment.start for segment in self.segments]
-        draw_polygon(points)
+        draw_polygon(self.polygon)
 
         highlight = self.highlight
         if highlight:

@@ -102,3 +102,23 @@ class Segment(object):
 
     def length2(self):
         return (self.end - self.start).magnitude2()
+
+class Polygon(object):
+    def __init__(self, points):
+        self.points = points
+
+    def __repr__(self):
+        return 'geo.Polygon(%s)' % self.points
+
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+        return self.points == other.points
+
+    def segments(self):
+        last_point = self.points[-1]
+        segments = []
+        for point in self.points:
+            segments.append(Segment(last_point, point))
+            last_point = point
+        return segments
