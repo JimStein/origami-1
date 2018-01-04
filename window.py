@@ -4,7 +4,8 @@ from PySide.QtCore import Qt
 from window_ui import Ui_MainWindow
 
 import geo
-import geoutil
+import geoutil.huzita_justin
+import geoutil.line
 import paper
 
 SELECTION_THRESHOLD = 10
@@ -88,14 +89,14 @@ class Window(QtGui.QMainWindow):
         found_line = None
         threshold = self.selection_threshold()
         for segment in self.sheet.segments:
-            line = geoutil.line_from_segment(segment)
-            if geoutil.distance_to_line(mouse_point, line) <= threshold and geoutil.is_point_within_segment(mouse_point, segment):
+            line = geoutil.line.from_segment(segment)
+            if geoutil.line.distance_to_point(line, mouse_point) <= threshold and geoutil.segment.is_point_within(segment, mouse_point):
                 found_line = line
                 break
 
         if not found_line:
             for line in self.lines:
-                if geoutil.distance_to_line(mouse_point, line) <= threshold:
+                if geoutil.line.distance_to_point(line, mouse_point) <= threshold:
                     found_line = line
                     break
 
@@ -116,14 +117,14 @@ class Window(QtGui.QMainWindow):
             min = self.window_to_point(QtCore.QPoint(0, 0))
             max = self.window_to_point(QtCore.QPoint(self.ui.canvas.width(), self.ui.canvas.height()))
             if abs(line.normal.x) > abs(line.normal.y):
-                minline = geoutil.line_from_point_normal(min, geo.Vector(0, 1))
-                maxline = geoutil.line_from_point_normal(max, geo.Vector(0, -1))
+                minline = geoutil.line.from_point_normal(min, geo.Vector(0, 1))
+                maxline = geoutil.line.from_point_normal(max, geo.Vector(0, -1))
             else:
-                minline = geoutil.line_from_point_normal(min, geo.Vector(1, 0))
-                maxline = geoutil.line_from_point_normal(max, geo.Vector(-1, 0))
+                minline = geoutil.line.from_point_normal(min, geo.Vector(1, 0))
+                maxline = geoutil.line.from_point_normal(max, geo.Vector(-1, 0))
 
-            minpoint = geoutil.intersect_lines(line, minline)
-            maxpoint = geoutil.intersect_lines(line, maxline)
+            minpoint = geoutil.line.intersect(line, minline)
+            maxpoint = geoutil.line.intersect(line, maxline)
             points = [minpoint, maxpoint]
             draw_points = [self.point_to_window(point) for point in points]
             painter.drawLine(*draw_points)
@@ -247,12 +248,12 @@ class Window(QtGui.QMainWindow):
     def add_lines(self, lines):
         for line in lines:
             for segment in self.sheet.segments:
-                point = geoutil.intersect_line_segment(line, segment)
+                point = geoutil.segment.intersect_line(segment, line)
                 if point:
                     self.intersections.append(point)
 
             for other_line in self.lines:
-                point = geoutil.intersect_lines(line, other_line)
+                point = geoutil.line.intersect(line, other_line)
                 if point:
                     self.intersections.append(point)
 
@@ -272,17 +273,17 @@ class Window(QtGui.QMainWindow):
         self.resize_canvas()
 
     def on_action_points(self):
-        line = geoutil.huzita_justin_1(self.selected[0], self.selected[1])
+        line = geoutil.huzita_justin.O1(self.selected[0], self.selected[1])
         self.selected.clear()
         self.add_line(line)
 
     def on_action_point_point(self):
-        line = geoutil.huzita_justin_2(self.selected[0], self.selected[1])
+        line = geoutil.huzita_justin.O2(self.selected[0], self.selected[1])
         self.selected.clear()
         self.add_line(line)
 
     def on_action_line_line(self):
-        lines = geoutil.huzita_justin_3(self.selected[0], self.selected[1])
+        lines = geoutil.huzita_justin.O3(self.selected[0], self.selected[1])
         if lines:
             self.selected.clear()
             self.add_lines(lines)
@@ -294,7 +295,7 @@ class Window(QtGui.QMainWindow):
             elif isinstance(selected, geo.Line):
                 line = selected
 
-        line = geoutil.huzita_justin_4(point, line)
+        line = geoutil.huzita_justin.O4(point, line)
         self.selected.clear()
         self.add_line(line)
 
@@ -306,7 +307,7 @@ class Window(QtGui.QMainWindow):
             elif isinstance(selected, geo.Line):
                 line = selected
 
-        lines = geoutil.huzita_justin_5(points[0], points[1], line)
+        lines = geoutil.huzita_justin.O5(points[0], points[1], line)
         if lines:
             self.selected.clear()
             self.add_lines(lines)
@@ -319,7 +320,7 @@ class Window(QtGui.QMainWindow):
             elif isinstance(selected, geo.Line):
                 lines.append(selected)
 
-        line = geoutil.huzita_justin_7(point, lines[0], lines[1])
+        line = geoutil.huzita_justin.O7(point, lines[0], lines[1])
         if line:
             self.selected.clear()
             self.add_line(line)
