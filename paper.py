@@ -24,11 +24,11 @@ class Sheet(object):
             new_facets = []
             for facet in layer.facets:
                 if geoutil.polygon.intersects_line(facet.polygon, line):
-                    (polygon0, polygon1) = geoutil.polygon.split(facet.polygon, line)
+                    (polygon0, polygon1, segment) = geoutil.polygon.split(facet.polygon, line)
                     old_facets.append(facet)
                     new_facets.extend([Facet(polygon0), Facet(polygon1)])
-                    self.segments.extend(polygon0.segments())
-                    self.points.extend(polygon0.points)
+                    self.segments.append(segment)
+                    self.points.extend(segment.points())
             for facet in old_facets:
                 layer.facets.remove(facet)
             layer.facets.extend(new_facets)
