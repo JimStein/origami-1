@@ -328,10 +328,9 @@ class Window(QtGui.QMainWindow):
             self.add_line(line)
 
     def on_action_split(self):
-        (polygon0, polygon1) = geoutil.polygon.split(self.sheet.layers[0].facets[0].polygon, self.selected[0])
+        self.sheet.split(self.selected[0])
         self.lines = []
         self.intersections = []
-        self.sheet = paper.Sheet(polygon0)
         self.selected.clear()
         self.highlighted = None
         self.update_actions()

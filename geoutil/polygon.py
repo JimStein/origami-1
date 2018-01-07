@@ -31,3 +31,14 @@ def split(polygon, line):
         last_parity = parity
 
     return (geo.Polygon(points[0]), geo.Polygon(points[1]))
+
+def intersects_line(polygon, line):
+    last_point = polygon.points[-1]
+    for point in polygon.points:
+        segment = geo.Segment(last_point, point)
+        polygon_line = geoutil.line.from_segment(segment)
+        intersection = geoutil.line.intersect(line, polygon_line)
+        if intersection and geoutil.segment.is_point_within(segment, intersection):
+            return True
+        last_point = point
+    return False
