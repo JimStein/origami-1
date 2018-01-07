@@ -18,6 +18,8 @@ LINE_COLOR = QtGui.QColor(0x80, 0x80, 0x80)
 SELECTED_LINE_COLORS = [QtGui.QColor(0xFF, 0x80, 0x00), QtGui.QColor(0x80, 0x40, 0x00)]
 SELECTED_POINT_COLORS = [QtGui.QColor(0x00, 0xFF, 0x80), QtGui.QColor(0x00, 0x80, 0x40)]
 HIGHLIGHT_COLOR = QtGui.QColor(0, 0, 0)
+FOLD_COLOR = QtGui.QColor(0x00, 0x00, 0xFF)
+FOLD_WIDTH = 3
 LINE_WIDTH = 2
 LINE_WIDTH_SELECTED = 3
 POINT_SIZE = 3
@@ -42,7 +44,8 @@ class Window(QtGui.QMainWindow):
         self.ui.actionLinePoint.triggered.connect(self.on_action_line_point)
         self.ui.actionPointPointLine.triggered.connect(self.on_action_point_point_line)
         self.ui.actionLinePointLine.triggered.connect(self.on_action_line_point_line)
-        self.ui.actionSplit.triggered.connect(self.on_action_split)
+        self.ui.actionValleyFold.triggered.connect(self.on_action_valley_fold)
+        self.ui.actionExecuteFold.triggered.connect(self.on_action_execute_fold)
 
         self.ui.canvas.setMouseTracking(True)
 
@@ -55,6 +58,7 @@ class Window(QtGui.QMainWindow):
         self.selected = []
         self.lines = []
         self.intersections = []
+        self.fold = None
         self.update_actions()
 
     def canvas_size(self):
@@ -152,6 +156,11 @@ class Window(QtGui.QMainWindow):
         for line in self.lines:
             draw_line(line)
 
+        pen = QtGui.QPen(FOLD_COLOR, FOLD_WIDTH, Qt.DashLine, Qt.SquareCap, Qt.MiterJoin)
+        painter.setPen(pen)
+        if self.fold:
+            draw_line(self.fold)
+
         idx = 0
         for selected in self.selected:
             if not isinstance(selected, geo.Line):
@@ -245,7 +254,8 @@ class Window(QtGui.QMainWindow):
         self.ui.actionLinePoint.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 1)
         self.ui.actionPointPointLine.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 1)
         self.ui.actionLinePointLine.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 2)
-        self.ui.actionSplit.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 1)
+        self.ui.actionValleyFold.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 1 and not self.fold)
+        self.ui.actionExecuteFold.setEnabled(self.fold is not None)
 
     def add_lines(self, lines):
         for line in lines:
@@ -327,11 +337,17 @@ class Window(QtGui.QMainWindow):
             self.selected.clear()
             self.add_line(line)
 
-    def on_action_split(self):
-        self.sheet.split(self.selected[0])
+    def on_action_valley_fold(self):
+        self.fold = self.selected[0]
         self.lines = []
         self.intersections = []
         self.selected.clear()
         self.highlighted = None
+        self.update_actions()
+        self.ui.canvas.update()
+
+    def on_action_execute_fold(self):
+        self.sheet.fold(self.fold)
+        self.fold = None
         self.update_actions()
         self.ui.canvas.update()

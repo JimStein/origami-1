@@ -46,3 +46,7 @@ def intersects_line(polygon, line):
             return True
         last_point = point
     return False
+
+def reflect(polygon, line):
+    points = [geoutil.point.reflect(point, line) for point in polygon.points]
+    return geo.Polygon(points)

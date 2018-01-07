@@ -13,6 +13,9 @@ class Point(object):
             return False
         return self.x == other.x and self.y == other.y
 
+    def __hash__(self):
+        return hash((self.x, self.y))
+
     def __add__(self, vector):
         return Point(self.x + vector.x, self.y + vector.y)
 
@@ -37,6 +40,9 @@ class Vector(object):
         if type(other) != type(self):
             return False
         return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        return hash((self.x, self.y))
 
     def __add__(self, other):
         return Vector(self.x + other.x, self.y + other.y)
@@ -81,6 +87,9 @@ class Line(object):
             return False
         return self.normal == other.normal and self.offset == other.offset
 
+    def __hash__(self):
+        return hash((self.normal, self.offset))
+
 class Segment(object):
     def __init__(self, start, end):
         self.start = start
@@ -93,6 +102,9 @@ class Segment(object):
         if type(other) != type(self):
             return False
         return self.start == other.start and self.end == other.end
+
+    def __hash__(self):
+        return hash((self.start, self.end))
 
     def points(self):
         return [self.start, self.end]
@@ -114,6 +126,9 @@ class Polygon(object):
         if type(other) != type(self):
             return False
         return self.points == other.points
+
+    def __hash__(self):
+        return hash(self.points)
 
     def segments(self):
         last_point = self.points[-1]

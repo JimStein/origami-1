@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'window.ui'
 #
-# Created: Sat Jan  6 22:27:35 2018
+# Created: Sun Jan  7 11:05:32 2018
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -55,8 +55,10 @@ class Ui_MainWindow(object):
         self.actionLinePointLine.setObjectName("actionLinePointLine")
         self.actionPointPointLine = QtGui.QAction(MainWindow)
         self.actionPointPointLine.setObjectName("actionPointPointLine")
-        self.actionSplit = QtGui.QAction(MainWindow)
-        self.actionSplit.setObjectName("actionSplit")
+        self.actionValleyFold = QtGui.QAction(MainWindow)
+        self.actionValleyFold.setObjectName("actionValleyFold")
+        self.actionExecuteFold = QtGui.QAction(MainWindow)
+        self.actionExecuteFold.setObjectName("actionExecuteFold")
         self.toolBar.addAction(self.actionZoomIn)
         self.toolBar.addAction(self.actionZoomOut)
         self.toolBar.addSeparator()
@@ -67,7 +69,8 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionPointPointLine)
         self.toolBar.addAction(self.actionLinePointLine)
         self.toolBar.addSeparator()
-        self.toolBar.addAction(self.actionSplit)
+        self.toolBar.addAction(self.actionValleyFold)
+        self.toolBar.addAction(self.actionExecuteFold)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -83,5 +86,7 @@ class Ui_MainWindow(object):
         self.actionLinePoint.setText(QtGui.QApplication.translate("MainWindow", "Line Point", None, QtGui.QApplication.UnicodeUTF8))
         self.actionLinePointLine.setText(QtGui.QApplication.translate("MainWindow", "Line Point-Line", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPointPointLine.setText(QtGui.QApplication.translate("MainWindow", "Point Point-Line", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSplit.setText(QtGui.QApplication.translate("MainWindow", "Split", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionValleyFold.setText(QtGui.QApplication.translate("MainWindow", "Valley Fold", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionValleyFold.setToolTip(QtGui.QApplication.translate("MainWindow", "Valley Fold", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionExecuteFold.setText(QtGui.QApplication.translate("MainWindow", "Execute Fold", None, QtGui.QApplication.UnicodeUTF8))
 

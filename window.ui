@@ -74,7 +74,8 @@
    <addaction name="actionPointPointLine"/>
    <addaction name="actionLinePointLine"/>
    <addaction name="separator"/>
-   <addaction name="actionSplit"/>
+   <addaction name="actionValleyFold"/>
+   <addaction name="actionExecuteFold"/>
   </widget>
   <action name="actionZoomIn">
    <property name="text">
@@ -116,9 +117,17 @@
     <string>Point Point-Line</string>
    </property>
   </action>
-  <action name="actionSplit">
+  <action name="actionValleyFold">
    <property name="text">
-    <string>Split</string>
+    <string>Valley Fold</string>
+   </property>
+   <property name="toolTip">
+    <string>Valley Fold</string>
+   </property>
+  </action>
+  <action name="actionExecuteFold">
+   <property name="text">
+    <string>Execute Fold</string>
    </property>
   </action>
  </widget>
