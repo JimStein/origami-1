@@ -73,6 +73,8 @@
    <addaction name="actionLinePoint"/>
    <addaction name="actionPointPointLine"/>
    <addaction name="actionLinePointLine"/>
+   <addaction name="separator"/>
+   <addaction name="actionSplit"/>
   </widget>
   <action name="actionZoomIn">
    <property name="text">
@@ -112,6 +114,11 @@
   <action name="actionPointPointLine">
    <property name="text">
     <string>Point Point-Line</string>
+   </property>
+  </action>
+  <action name="actionSplit">
+   <property name="text">
+    <string>Split</string>
    </property>
   </action>
  </widget>

@@ -42,6 +42,7 @@ class Window(QtGui.QMainWindow):
         self.ui.actionLinePoint.triggered.connect(self.on_action_line_point)
         self.ui.actionPointPointLine.triggered.connect(self.on_action_point_point_line)
         self.ui.actionLinePointLine.triggered.connect(self.on_action_line_point_line)
+        self.ui.actionSplit.triggered.connect(self.on_action_split)
 
         self.ui.canvas.setMouseTracking(True)
 
@@ -244,6 +245,7 @@ class Window(QtGui.QMainWindow):
         self.ui.actionLinePoint.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 1)
         self.ui.actionPointPointLine.setEnabled(self.num_selected(geo.Point) == 2 and self.num_selected(geo.Line) == 1)
         self.ui.actionLinePointLine.setEnabled(self.num_selected(geo.Point) == 1 and self.num_selected(geo.Line) == 2)
+        self.ui.actionSplit.setEnabled(self.num_selected(geo.Point) == 0 and self.num_selected(geo.Line) == 1)
 
     def add_lines(self, lines):
         for line in lines:
@@ -324,3 +326,13 @@ class Window(QtGui.QMainWindow):
         if line:
             self.selected.clear()
             self.add_line(line)
+
+    def on_action_split(self):
+        (polygon0, polygon1) = geoutil.polygon.split(self.sheet.layers[0].facets[0].polygon, self.selected[0])
+        self.lines = []
+        self.intersections = []
+        self.sheet = paper.Sheet(polygon0)
+        self.selected.clear()
+        self.highlighted = None
+        self.update_actions()
+        self.ui.canvas.update()
