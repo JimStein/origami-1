@@ -160,6 +160,17 @@ class Window(QtGui.QMainWindow):
         painter.setPen(pen)
         if self.fold:
             draw_line(self.fold)
+            line = geoutil.line.perpendicular(self.fold, geo.Point(0.5, 0.5))
+            point = self.point_to_window(geoutil.line.intersect(line, self.fold))
+            vec = QtCore.QPoint(self.fold.normal.x * 20, self.fold.normal.y * 20)
+            p = geoutil.vector.perpendicular(self.fold.normal)
+            perp_vec = QtCore.QPoint(p.x * 5, p.y * 5)
+            norm_vec = QtCore.QPoint(self.fold.normal.x * 5, self.fold.normal.y * 5)
+            pen = QtGui.QPen(QtGui.QColor(0, 0, 0), 2, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
+            painter.setPen(pen)
+            painter.drawLine(point - vec, point + vec)
+            painter.drawLine(point + vec, point + vec - norm_vec - perp_vec)
+            painter.drawLine(point + vec, point + vec - norm_vec + perp_vec)
 
         idx = 0
         for selected in self.selected:
@@ -201,16 +212,26 @@ class Window(QtGui.QMainWindow):
 
     def on_canvas_mouse_release_event(self, event):
         mouse_point = self.window_to_point(event.pos())
+        found = False
 
-        if self.highlight:
-            if self.highlight in self.selected:
-                self.selected.remove(self.highlight)
+        if self.fold:
+            line = geoutil.line.perpendicular(self.fold, geo.Point(0.5, 0.5))
+            point = geoutil.line.intersect(line, self.fold)
+            threshold = self.selection_threshold()
+            if (mouse_point - point).magnitude2() < threshold * threshold:
+                self.fold = geo.Line(-self.fold.normal, -self.fold.offset)
+                found = True
+
+        if not found:
+            if self.highlight:
+                if self.highlight in self.selected:
+                    self.selected.remove(self.highlight)
+                else:
+                    if self.num_selected(type(self.highlight)) < 2:
+                        self.selected.append(self.highlight)
+                        self.highlight = None
             else:
-                if self.num_selected(type(self.highlight)) < 2:
-                    self.selected.append(self.highlight)
-                    self.highlight = None
-        else:
-            self.selected.clear()
+                self.selected.clear()
 
         self.ui.canvas.update()
         self.update_actions()

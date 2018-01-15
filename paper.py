@@ -28,8 +28,8 @@ class Sheet(object):
                 if geoutil.polygon.intersects_line(facet.polygon, line):
                     (polygon0, polygon1, segment) = geoutil.polygon.split(facet.polygon, line)
                     old_facets.append(facet)
-                    new_facets.append(Facet(polygon0))
-                    new_layer.append(Facet(geoutil.polygon.reflect(polygon1, line)))
+                    new_facets.append(Facet(polygon1))
+                    new_layer.append(Facet(geoutil.polygon.reflect(polygon0, line)))
             for facet in old_facets:
                 layer.facets.remove(facet)
             layer.facets.extend(new_facets)
