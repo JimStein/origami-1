@@ -33,7 +33,17 @@ def split(polygon, line):
         last_point = point
         last_parity = parity
 
-    return (geo.Polygon(points[0]), geo.Polygon(points[1]), geo.Segment(*segment_points))
+    polygon0 = None
+    polygon1 = None
+    segment = None
+    if len(segment_points) == 2:
+        segment = geo.Segment(segment_points[0], segment_points[1])
+    if len(points[0]) > 2:
+        polygon0 = geo.Polygon(points[0])
+    if len(points[1]) > 2:
+        polygon1 = geo.Polygon(points[1])
+
+    return (polygon0, polygon1, segment)
 
 def intersects_line(polygon, line):
     last_point = polygon.points[-1]
