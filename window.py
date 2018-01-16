@@ -13,7 +13,7 @@ MARGIN = 10
 ZOOM_INCREMENT = 1.25
 
 EDGE_COLOR = QtGui.QColor(0, 0, 0)
-PAPER_COLOR = QtGui.QColor(0xFF, 0xFF, 0x80)
+PAPER_COLORS = [QtGui.QColor(0xFF, 0xFF, 0xFF), QtGui.QColor(0xFF, 0xFF, 0x80)]
 LINE_COLOR = QtGui.QColor(0x80, 0x80, 0x80)
 SELECTED_LINE_COLORS = [QtGui.QColor(0xFF, 0x80, 0x00), QtGui.QColor(0x80, 0x40, 0x00)]
 SELECTED_POINT_COLORS = [QtGui.QColor(0x00, 0xFF, 0x80), QtGui.QColor(0x00, 0x80, 0x40)]
@@ -139,11 +139,11 @@ class Window(QtGui.QMainWindow):
             painter.drawPolygon(draw_points)
 
         pen = QtGui.QPen(EDGE_COLOR, LINE_WIDTH, Qt.SolidLine, Qt.SquareCap, Qt.MiterJoin)
-        brush = QtGui.QBrush(PAPER_COLOR)
         painter.setPen(pen)
-        painter.setBrush(brush)
         for layer in self.sheet.layers:
             for facet in layer.facets:
+                brush = QtGui.QBrush(PAPER_COLORS[facet.parity])
+                painter.setBrush(brush)
                 draw_polygon(facet.polygon)
 
         highlight = self.highlight

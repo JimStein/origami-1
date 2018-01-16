@@ -2,8 +2,9 @@ import geo
 import geoutil
 
 class Facet(object):
-    def __init__(self, polygon):
+    def __init__(self, polygon, parity):
         self.polygon = polygon
+        self.parity = parity
 
     def __repr__(self):
         return 'paper.Facet(%s)' % self.polygon
@@ -13,13 +14,13 @@ class Facet(object):
         facet0 = None
         facet1 = None
         if polygon0:
-            facet0 = Facet(polygon0)
+            facet0 = Facet(polygon0, self.parity)
         if polygon1:
-            facet1 = Facet(polygon1)
+            facet1 = Facet(polygon1, self.parity)
         return (facet0, facet1, segment)
 
     def reflect(self, line):
-        return Facet(geoutil.polygon.reflect(self.polygon, line))
+        return Facet(geoutil.polygon.reflect(self.polygon, line), 1 - self.parity)
 
 class Layer(object):
     def __init__(self, facets):
@@ -30,7 +31,7 @@ class Layer(object):
 
 class Sheet(object):
     def __init__(self, polygon):
-        facet = Facet(polygon)
+        facet = Facet(polygon, 1)
         layer = Layer([facet])
 
         self.layers = [layer]
