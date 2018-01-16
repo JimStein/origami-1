@@ -8,6 +8,19 @@ class Facet(object):
     def __repr__(self):
         return 'paper.Facet(%s)' % self.polygon
 
+    def split(self, line):
+        (polygon0, polygon1, segment) = geoutil.polygon.split(self.polygon, line)
+        facet0 = None
+        facet1 = None
+        if polygon0:
+            facet0 = Facet(polygon0)
+        if polygon1:
+            facet1 = Facet(polygon1)
+        return (facet0, facet1, segment)
+
+    def reflect(self, line):
+        return Facet(geoutil.polygon.reflect(self.polygon, line))
+
 class Layer(object):
     def __init__(self, facets):
         self.facets = facets
@@ -42,12 +55,13 @@ class Sheet(object):
             new_facets = []
             new_layer = []
             for facet in layer.facets:
-                (polygon0, polygon1, segment) = geoutil.polygon.split(facet.polygon, line)
+                (facet0, facet1, segment) = facet.split(line)
                 old_facets.append(facet)
-                if polygon1:
-                    new_facets.append(Facet(polygon1))
-                if polygon0:
-                    new_layer.append(Facet(geoutil.polygon.reflect(polygon0, line)))
+                if facet1:
+                    new_facets.append(facet1)
+                if facet0:
+                    facet0 = facet0.reflect(line)
+                    new_layer.append(facet0)
             for facet in old_facets:
                 layer.facets.remove(facet)
             layer.facets.extend(new_facets)
