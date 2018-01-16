@@ -61,7 +61,6 @@ class Sheet(object):
                 if facet1:
                     new_facets.append(facet1)
                 if facet0:
-                    facet0 = facet0.reflect(line)
                     new_layer.append(facet0)
             for facet in old_facets:
                 layer.facets.remove(facet)
@@ -69,7 +68,11 @@ class Sheet(object):
             if not layer.facets:
                 old_layers.append(layer)
             if new_layer:
-                new_layers.append(Layer(new_layer))
+                reflected = []
+                for facet in new_layer:
+                    facet = facet.reflect(line)
+                    reflected.append(facet)
+                new_layers.append(Layer(reflected))
         for layer in old_layers:
             self.layers.remove(layer)
         self.layers.extend(new_layers)
