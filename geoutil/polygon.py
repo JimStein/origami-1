@@ -13,8 +13,10 @@ def split(polygon, line):
     points = ([], [])
     segment_points = []
     segment_idxs = [-1, -1]
+    point_mappings = ([], [])
     last_point = polygon.points[-1]
     last_parity = point_parity(last_point, line)
+    point_idx = 0
 
     for point in polygon.points:
         parity = point_parity(point, line)
@@ -23,12 +25,16 @@ def split(polygon, line):
             segment_idxs[idx] = len(points[idx])
 
             points[0].append(point)
+            point_mappings[0].append(point_idx)
             points[1].append(point)
+            point_mappings[1].append(point_idx)
             segment_points.append(point)
         else:
             idx = 0 if parity == -1 else 1
             points[idx].append(point)
+            point_mappings[idx].append(point_idx)
         last_parity = parity
+        point_idx += 1
 
     polygon0 = None
     polygon1 = None
@@ -40,7 +46,7 @@ def split(polygon, line):
     if len(points[1]) > 2:
         polygon1 = geo.Polygon(points[1])
 
-    return (polygon0, polygon1, segment, segment_idxs)
+    return (polygon0, polygon1, segment, segment_idxs, point_mappings)
 
 def intersect_line(polygon, line):
     points = []

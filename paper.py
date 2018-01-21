@@ -41,21 +41,26 @@ class Sheet(object):
 
     def split_facet_edges(self, facet, line):
         polygon_points = facet.polygon.points
+        neighbors = facet.neighbors
         points = geoutil.polygon.intersect_line(facet.polygon, line)
         offset = 0
         for (point, idx) in points:
             polygon_points.insert(idx + offset, point)
+            neighbors.insert(idx + offset, neighbors[idx + offset])
             offset += 1
         facet.polygon = geo.Polygon(polygon_points)
+        facet.neighbors = neighbors
 
     def split_facet(self, facet, line):
-        (polygon0, polygon1, segment, idxs) = geoutil.polygon.split(facet.polygon, line)
+        (polygon0, polygon1, segment, idxs, mappings) = geoutil.polygon.split(facet.polygon, line)
         facet0 = None
         facet1 = None
         if polygon0:
             facet0 = Facet(polygon0, facet.parity)
+            facet0.neighbors = [facet.neighbors[idx] for idx in mappings[0]]
         if polygon1:
             facet1 = Facet(polygon1, facet.parity)
+            facet1.neighbors = [facet.neighbors[idx] for idx in mappings[1]]
         if facet0 and facet1:
             facet0.neighbors[idxs[0]] = (facet1, idxs[1])
             facet1.neighbors[idxs[1]] = (facet0, idxs[0])
