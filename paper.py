@@ -5,19 +5,10 @@ class Facet(object):
     def __init__(self, polygon, parity):
         self.polygon = polygon
         self.parity = parity
+        self.neighbors = [(None, -1)] * len(polygon.points)
 
     def __repr__(self):
         return 'paper.Facet(%s)' % self.polygon
-
-    def split(self, line):
-        (polygon0, polygon1, segment) = geoutil.polygon.split(self.polygon, line)
-        facet0 = None
-        facet1 = None
-        if polygon0:
-            facet0 = Facet(polygon0, self.parity)
-        if polygon1:
-            facet1 = Facet(polygon1, self.parity)
-        return (facet0, facet1, segment)
 
     def reflect(self, line):
         return Facet(geoutil.polygon.reflect(self.polygon, line), 1 - self.parity)
@@ -48,15 +39,28 @@ class Sheet(object):
                 ret += '  %s\n' % facet.polygon
         return ret
 
-    def split_facet(self, facet, line):
+    def split_facet_edges(self, facet, line):
         polygon_points = facet.polygon.points
         points = geoutil.polygon.intersect_line(facet.polygon, line)
         offset = 0
         for (point, idx) in points:
             polygon_points.insert(idx + offset, point)
             offset += 1
-        facet = Facet(geo.Polygon(polygon_points), facet.parity)
-        return facet.split(line)
+        facet.polygon = geo.Polygon(polygon_points)
+
+    def split_facet(self, facet, line):
+        (polygon0, polygon1, segment, idxs) = geoutil.polygon.split(facet.polygon, line)
+        facet0 = None
+        facet1 = None
+        if polygon0:
+            facet0 = Facet(polygon0, facet.parity)
+        if polygon1:
+            facet1 = Facet(polygon1, facet.parity)
+        if facet0 and facet1:
+            facet0.neighbors[idxs[0]] = (facet1, idxs[1])
+            facet1.neighbors[idxs[1]] = (facet0, idxs[0])
+
+        return (facet0, facet1, segment)
 
     def fold(self, line):
         old_layers = []
@@ -66,6 +70,7 @@ class Sheet(object):
             new_facets = []
             new_layer = []
             for facet in layer.facets:
+                self.split_facet_edges(facet, line)
                 (facet0, facet1, segment) = self.split_facet(facet, line)
                 old_facets.append(facet)
                 if facet1:
