@@ -48,6 +48,16 @@ class Sheet(object):
                 ret += '  %s\n' % facet.polygon
         return ret
 
+    def split_facet(self, facet, line):
+        polygon_points = facet.polygon.points
+        points = geoutil.polygon.intersect_line(facet.polygon, line)
+        offset = 0
+        for (point, idx) in points:
+            polygon_points.insert(idx + offset, point)
+            offset += 1
+        facet = Facet(geo.Polygon(polygon_points), facet.parity)
+        return facet.split(line)
+
     def fold(self, line):
         old_layers = []
         new_layers = []
@@ -56,7 +66,7 @@ class Sheet(object):
             new_facets = []
             new_layer = []
             for facet in layer.facets:
-                (facet0, facet1, segment) = facet.split(line)
+                (facet0, facet1, segment) = self.split_facet(facet, line)
                 old_facets.append(facet)
                 if facet1:
                     new_facets.append(facet1)

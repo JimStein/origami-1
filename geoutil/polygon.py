@@ -12,8 +12,6 @@ def point_parity(point, line):
 def split(polygon, line):
     points = ([], [])
     segment_points = []
-    last_point = polygon.points[-1]
-    last_parity = point_parity(last_point, line)
 
     for point in polygon.points:
         parity = point_parity(point, line)
@@ -22,16 +20,8 @@ def split(polygon, line):
             points[1].append(point)
             segment_points.append(point)
         else:
-            if last_parity != 0 and parity != last_parity:
-                polygon_line = geoutil.line.from_points(last_point, point)
-                intersection = geoutil.line.intersect(line, polygon_line)
-                points[0].append(intersection)
-                points[1].append(intersection)
-                segment_points.append(intersection)
             idx = 0 if parity == -1 else 1
             points[idx].append(point)
-        last_point = point
-        last_parity = parity
 
     polygon0 = None
     polygon1 = None
@@ -44,6 +34,23 @@ def split(polygon, line):
         polygon1 = geo.Polygon(points[1])
 
     return (polygon0, polygon1, segment)
+
+def intersect_line(polygon, line):
+    points = []
+    idx = 0
+    last_point = polygon.points[-1]
+    last_parity = point_parity(last_point, line)
+
+    for point in polygon.points:
+        parity = point_parity(point, line)
+        if parity != 0 and last_parity != 0 and parity != last_parity:
+            polygon_line = geoutil.line.from_points(last_point, point)
+            intersection = geoutil.line.intersect(line, polygon_line)
+            points.append((intersection, idx))
+        idx += 1
+        last_point = point
+        last_parity = parity
+    return points
 
 def intersects_line(polygon, line):
     last_point = polygon.points[-1]
