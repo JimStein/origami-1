@@ -5,7 +5,7 @@ class Facet(object):
     def __init__(self, polygon, parity):
         self.polygon = polygon
         self.parity = parity
-        self.neighbors = [(None, -1)] * len(polygon.points)
+        self.neighbors = [None] * len(polygon.points)
 
     def __repr__(self):
         return 'paper.Facet(%s)' % self.polygon
@@ -39,20 +39,40 @@ class Sheet(object):
                 ret += '  %s\n' % facet.polygon
         return ret
 
+    def split_facet_edge(self, facet, point, idx):
+        points = facet.polygon.points
+        neighbors = facet.neighbors
+        points.insert(idx, point)
+        facet.neighbors.insert(idx, None)
+        facet.polygon = geo.Polygon(points)
+        for neighbor in neighbors[idx + 1:]:
+            if neighbor:
+                (neighbor_facet, neighbor_idx) = neighbor
+                (neighbor_facet2, neighbor_idx2) = neighbor_facet.neighbors[neighbor_idx]
+                neighbor_facet.neighbors[neighbor_idx] = (neighbor_facet2, neighbor_idx2 + 1)
+
     def split_facet_edges(self, facet, line):
         polygon_points = facet.polygon.points
         neighbors = facet.neighbors
         points = geoutil.polygon.intersect_line(facet.polygon, line)
         offset = 0
         for (point, idx) in points:
-            polygon_points.insert(idx + offset, point)
-            neighbors.insert(idx + offset, neighbors[idx + offset])
+            neighbor = facet.neighbors[idx + offset]
+            self.split_facet_edge(facet, point, idx + offset)
+            if neighbor:
+                (neighbor_facet, neighbor_idx) = neighbor
+                self.split_facet_edge(neighbor_facet, point, neighbor_idx)
+                if facet.polygon.points[idx + offset] == neighbor_facet.polygon.points[neighbor_idx]:
+                    facet.neighbors[idx + offset] = (neighbor_facet, neighbor_idx)
+                    facet.neighbors[idx + offset + 1] = (neighbor_facet, neighbor_idx + 1)
+                    neighbor_facet.neighbors[neighbor_idx] = (facet, idx + offset)
+                    neighbor_facet.neighbors[neighbor_idx + 1] = (facet, idx + offset + 1)
+                else:
+                    facet.neighbors[idx + offset] = (neighbor_facet, neighbor_idx + 1)
+                    facet.neighbors[idx + offset + 1] = (neighbor_facet, neighbor_idx)
+                    neighbor_facet.neighbors[neighbor_idx] = (facet, idx + offset + 1)
+                    neighbor_facet.neighbors[neighbor_idx + 1] = (facet, idx + offset)
             offset += 1
-            for neighbor in neighbors[idx + offset + 1:]:
-                if neighbor:
-                    (neighbor_facet, neighbor_idx) = neighbor
-                    (neighbor_facet2, neighbor_idx2) = neighbor_facet.neighbors[neighbor_idx]
-                    neighbor_facet.neighbors[neighbor_idx] = (neighbor_facet2, neighbor_idx2 + 1)
         facet.polygon = geo.Polygon(polygon_points)
         facet.neighbors = neighbors
 
