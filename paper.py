@@ -48,6 +48,11 @@ class Sheet(object):
             polygon_points.insert(idx + offset, point)
             neighbors.insert(idx + offset, neighbors[idx + offset])
             offset += 1
+            for neighbor in neighbors[idx + offset + 1:]:
+                if neighbor:
+                    (neighbor_facet, neighbor_idx) = neighbor
+                    (neighbor_facet2, neighbor_idx2) = neighbor_facet.neighbors[neighbor_idx]
+                    neighbor_facet.neighbors[neighbor_idx] = (neighbor_facet2, neighbor_idx2 + 1)
         facet.polygon = geo.Polygon(polygon_points)
         facet.neighbors = neighbors
 
