@@ -16,9 +16,19 @@ class Facet(object):
 class Layer(object):
     def __init__(self, facets):
         self.facets = facets
+        for facet in self.facets:
+            facet.layer = self
 
     def __repr__(self):
         return 'paper.Layer(%s)' % self.facets
+
+    def add_facets(self, facets):
+        self.facets.extend(facets)
+        for facet in facets:
+            facet.layer = self
+
+    def remove_facet(self, facet):
+        self.facets.remove(facet)
 
 class Sheet(object):
     def __init__(self, polygon):
@@ -92,6 +102,12 @@ class Sheet(object):
 
         return (facet0, facet1, segment)
 
+    def renumber_layers(self):
+        depth = 0
+        for layer in self.layers:
+            layer.depth = depth
+            depth += 1
+
     def fold(self, line):
         old_layers = []
         new_layers = []
@@ -108,8 +124,8 @@ class Sheet(object):
                 if facet0:
                     new_layer.append(facet0)
             for facet in old_facets:
-                layer.facets.remove(facet)
-            layer.facets.extend(new_facets)
+                layer.remove_facet(facet)
+            layer.add_facets(new_facets)
             if not layer.facets:
                 old_layers.append(layer)
             if new_layer:
@@ -121,6 +137,7 @@ class Sheet(object):
         for layer in old_layers:
             self.layers.remove(layer)
         self.layers.extend(new_layers)
+        self.renumber_layers()
         segments = set()
         points = set()
         for layer in self.layers:
