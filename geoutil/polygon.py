@@ -77,6 +77,17 @@ def intersects_line(polygon, line):
         last_point = point
     return False
 
+def test_line(polygon, line):
+    parities = {-1: 0, 0: 0, 1: 0}
+    for point in polygon.points:
+        parity = point_parity(point, line)
+        parities[parity] += 1
+    if parities[-1] == 0:
+        return 1
+    if parities[1] == 0:
+        return -1
+    return 0
+
 def reflect(polygon, line):
     points = [geoutil.point.reflect(point, line) for point in polygon.points]
     return geo.Polygon(points)

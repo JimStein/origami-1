@@ -102,6 +102,16 @@ class Sheet(object):
 
         return (facet0, facet1, segment)
 
+    def reflect_facet(self, facet, line):
+        reflected_facet = facet.reflect(line)
+        reflected_facet.neighbors = facet.neighbors
+        for neighbor in reflected_facet.neighbors:
+            if neighbor:
+                (neighbor_facet, neighbor_idx) = neighbor
+                (neighbor_facet2, neighbor_idx2) = neighbor_facet.neighbors[neighbor_idx]
+                neighbor_facet.neighbors[neighbor_idx] = (reflected_facet, neighbor_idx2)
+        return reflected_facet
+
     def renumber_layers(self):
         depth = 0
         for layer in self.layers:
@@ -111,29 +121,43 @@ class Sheet(object):
     def fold(self, line):
         old_layers = []
         new_layers = []
+        active_facets = set()
+        started = False
         for layer in reversed(self.layers):
             old_facets = []
             new_facets = []
             new_layer = []
             for facet in layer.facets:
-                self.split_facet_edges(facet, line)
-                (facet0, facet1, segment) = self.split_facet(facet, line)
-                old_facets.append(facet)
-                if facet1:
-                    new_facets.append(facet1)
-                if facet0:
-                    new_layer.append(facet0)
+                if geoutil.polygon.test_line(facet.polygon, line) != 1:
+                    self.split_facet_edges(facet, line)
+                    (facet0, facet1, segment) = self.split_facet(facet, line)
+                    old_facets.append(facet)
+                    if facet1:
+                        new_facets.append(facet1)
+                    if facet0:
+                        new_layer.append(facet0)
+                if facet in active_facets:
+                    active_facets.remove(facet)
             for facet in old_facets:
                 layer.remove_facet(facet)
             layer.add_facets(new_facets)
             if not layer.facets:
                 old_layers.append(layer)
             if new_layer:
+                started = True
                 reflected = []
                 for facet in new_layer:
-                    facet = facet.reflect(line)
+                    for neighbor in facet.neighbors:
+                        if neighbor:
+                            (neighbor_facet, _) = neighbor
+                            if hasattr(neighbor_facet.layer, 'depth') and neighbor_facet.layer.depth <= layer.depth and geoutil.polygon.test_line(neighbor_facet.polygon, line) != 1:
+                                active_facets.add(neighbor_facet)
+
+                    facet = self.reflect_facet(facet, line)
                     reflected.append(facet)
                 new_layers.append(Layer(reflected))
+            if started and not active_facets:
+                break
         for layer in old_layers:
             self.layers.remove(layer)
         self.layers.extend(new_layers)
